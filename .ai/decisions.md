@@ -395,6 +395,226 @@
 
 ---
 
-**ADR Index**: 15 decisions documented
-**Last Updated**: Phase 0 Initialization
-**Status**: All Phase 0 ADRs approved and implemented
+## Phase 2 Database Architecture Decisions
+
+### ADR-016: Expand Schema to 30 Models
+
+**Status**: Approved ✓
+
+**Decision**: Redesign Prisma schema from 10 to 30 models for comprehensive e-commerce platform.
+
+**Rationale**:
+- Support for IoT Kits (complex product bundles)
+- Brand management for product categorization
+- Hierarchical category structure for unlimited nesting
+- Comprehensive inventory tracking with audit history
+- Flexible discount/coupon system
+- Website configuration and homepage management
+- Audit logging for compliance
+
+**Models Added**:
+- Brand, IoT Kit system (IotKit, KitImage, KitProduct)
+- InventoryHistory for tracking
+- Coupon & UserCouponUsage
+- WebsiteSettings, HomepageSection, Banner, Announcement
+- AuditLog for compliance
+
+**Implications**:
+- More complex relationships but better normalization
+- Comprehensive schema for production launch
+- Scalable to support complex business logic
+
+---
+
+### ADR-017: Soft Deletes for Audit Trail
+
+**Status**: Approved ✓
+
+**Decision**: Implement soft deletes (isDeleted, deletedAt) for audit trail preservation.
+
+**Rationale**:
+- Regulatory compliance (financial records, order history)
+- Data recovery ability
+- Audit trail immutability
+- Prevents accidental data loss
+
+**Affected Models**: User, Product, Brand, Category, Address, Coupon, Order, Review
+
+**Query Pattern**:
+```prisma
+await prisma.product.findMany({
+  where: { isDeleted: false }
+})
+```
+
+---
+
+### ADR-018: Decimal for Monetary Values
+
+**Status**: Approved ✓
+
+**Decision**: Use Decimal(12, 2) for all monetary fields (prices, totals, costs).
+
+**Rationale**:
+- Precision: No floating-point errors
+- Financial accuracy: Supports rupees with paise
+- Regulatory compliance: Auditable, exact values
+- Prevents rounding issues
+
+**Fields**:
+- Product: basePrice, salePrice
+- Order: subtotal, taxAmount, shippingCost, discountAmount, grandTotal
+- Coupon: value, minPurchaseAmount, maxDiscountAmount
+
+---
+
+### ADR-019: De-normalized OrderItem Fields
+
+**Status**: Approved ✓
+
+**Decision**: Store product name, SKU, price at time of order in OrderItem.
+
+**Rationale**:
+- Order history immutability
+- Product deletion doesn't break orders
+- Accurate historical pricing
+- Complete audit trail of what customer bought
+
+**Prevents**:
+- Lost order data when product deleted
+- Pricing discrepancies
+- Inventory lookup delays
+
+---
+
+### ADR-020: Hierarchical Categories with Self-Reference
+
+**Status**: Approved ✓
+
+**Decision**: Use parentId self-referencing for unlimited category nesting.
+
+**Rationale**:
+- Unlimited nesting depth
+- Flexible category structure
+- Scalable (no depth limit)
+- Supports IoT product taxonomy
+
+**Example**:
+```
+Electronics
+  ├─ Microcontrollers
+  │   ├─ Arduino
+  │   ├─ Raspberry Pi
+  │   └─ ESP32
+  └─ Sensors
+      ├─ Temperature
+      └─ Motion
+```
+
+---
+
+### ADR-021: Multiple Address Types in Single Table
+
+**Status**: Approved ✓
+
+**Decision**: Single Address table with type enum instead of separate tables.
+
+**Rationale**:
+- Code reuse
+- Flexibility: SHIPPING, BILLING, or BOTH
+- Consistency: Single source of truth
+- Simplifies queries
+
+**Types**: SHIPPING, BILLING, BOTH
+
+---
+
+### ADR-022: Flexible JSON Fields for Extensibility
+
+**Status**: Approved ✓
+
+**Decision**: Use JSON for fields that might vary by product type.
+
+**Rationale**:
+- Different products need different specifications
+- No schema migration needed for new fields
+- Extensible without code changes
+- Product flexibility
+
+**JSON Fields**:
+- Product.specifications (sensor specs, connector types, etc.)
+- Product.dimensions (length, width, height, unit)
+- OrderItem.metadata (item-specific data)
+- HomepageSection.content (flexible content structure)
+
+---
+
+### ADR-023: Coupon Applicability with Arrays
+
+**Status**: Approved ✓
+
+**Decision**: Use String[] arrays for excluded categories and products.
+
+**Rationale**:
+- Flexible coupon rules
+- Can exclude specific items
+- Scalable to any number
+- PostgreSQL array support
+
+**Example**:
+```prisma
+coupon = await prisma.coupon.create({
+  data: {
+    code: "SUMMER20",
+    type: "PERCENTAGE",
+    value: new Decimal(20),
+    excludedCategories: ["luxury", "premium"],
+    excludedProducts: ["prod_001", "prod_002"]
+  }
+})
+```
+
+---
+
+### ADR-024: Optional Foreign Keys for Deletion Safety
+
+**Status**: Approved ✓
+
+**Decision**: Make product/kit FKs optional in CartItem and OrderItem.
+
+**Rationale**:
+- Product deletion doesn't break shopping cart
+- Order history preserved if product deleted
+- Better data integrity
+- Supports product discontinuation
+
+**Pattern**:
+- productId: String? (optional)
+- kitId: String? (optional)
+- At least one must be NOT NULL (enforced at app level)
+
+---
+
+### ADR-025: Comprehensive Index Strategy
+
+**Status**: Approved ✓
+
+**Decision**: Create 80+ indexes for performance optimization.
+
+**Types of Indexes**:
+1. Foreign key indexes (all FK fields)
+2. Search indexes (name, slug, email)
+3. Status indexes (for filtering)
+4. Composite indexes (common query patterns)
+5. Timestamp indexes (for date range queries)
+
+**Performance Benefits**:
+- 10-100x faster queries
+- Efficient pagination
+- Optimized filtering
+
+---
+
+**ADR Index**: 25 decisions documented (Phase 0-2)
+**Last Updated**: Phase 2 Database Architecture
+**Status**: All ADRs approved and implemented

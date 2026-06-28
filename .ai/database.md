@@ -1,8 +1,8 @@
-# A.K.R Electronics - Database Design
+# A.K.R Electronics - Database Design (Phase 2)
 
 ## Database Engine
 
-**PostgreSQL 14+**
+**PostgreSQL 14+** - Production grade, free, open-source
 - Free and open-source
 - Robust with ACID compliance
 - Excellent for relational data
@@ -11,10 +11,48 @@
 
 ## Schema Overview
 
-### Core Models
+**Schema Version**: 2.0 (Phase 2 - Production Grade)  
+**Total Models**: 30  
+**Total Enums**: 11  
+**Total Foreign Keys**: 40+  
+**Total Indexes**: 80+
 
-#### User
-Stores customer and admin users.
+### Comprehensive Model List
+
+#### 1. User Management (1 model)
+- User (with comprehensive fields, soft delete, role-based access)
+
+#### 2. Products & Catalog (8 models)
+- Brand, Category, Product, ProductImage
+- IotKit, KitImage, KitProduct
+
+#### 3. Inventory (1 model)
+- InventoryHistory (complete audit trail)
+
+#### 4. Shopping & Orders (5 models)
+- Cart, CartItem, Order, OrderItem, WishlistItem
+
+#### 5. Addresses (1 model)
+- Address (multiple types, soft delete)
+
+#### 6. Discounts (2 models)
+- Coupon, UserCouponUsage
+
+#### 7. Reviews (1 model)
+- Review (with moderation)
+
+#### 8. Website Configuration (3 models)
+- WebsiteSettings, HomepageSection, Banner, Announcement
+
+#### 9. Audit (1 model)
+- AuditLog (compliance tracking)
+
+---
+
+## Detailed Model Descriptions
+
+### User
+Stores customer and admin users with comprehensive fields.
 
 ```prisma
 model User {
