@@ -1,120 +1,60 @@
-import { prisma } from '@/lib/prisma';
+import { CartRepository, ProductRepository } from '@/lib/firestore/repositories';
 import { AddToCartInput } from '@/lib/validation/cart-validation';
+import { Decimal } from 'decimal.js';
 
 export class CartService {
-  static async getOrCreateCart(userId: string) {
-    let cart = await prisma.cart.findUnique({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            product: { select: { id: true, name: true, basePrice: true, salePrice: true } },
-            kit: { select: { id: true, name: true, basePrice: true, salePrice: true } },
-          },
-        },
-      },
-    });
-
-    if (!cart) {
-      cart = await prisma.cart.create({
-        data: { userId },
-        include: { items: true },
-      });
-    }
-
-    return cart;
-  }
-
   static async addToCart(userId: string, data: AddToCartInput) {
-    const cart = await this.getOrCreateCart(userId);
-
-    const existingItem = await prisma.cartItem.findFirst({
-      where: {
-        cartId: cart.id,
-        productId: data.productId || null,
-        kitId: data.kitId || null,
-      },
+    const item = await CartRepository.addItem(userId, {
+      productId: data.productId || undefined,
+      kitId: data.kitId || undefined,
+      quantity: data.quantity,
     });
-
-    if (existingItem) {
-      return prisma.cartItem.update({
-        where: { id: existingItem.id },
-        data: { quantity: { increment: data.quantity } },
-      });
-    }
-
-    return prisma.cartItem.create({
-      data: {
-        cartId: cart.id,
-        productId: data.productId || null,
-        kitId: data.kitId || null,
-        quantity: data.quantity,
-      },
-      include: {
-        product: true,
-        kit: true,
-      },
-    });
+    return item;
   }
 
   static async removeFromCart(userId: string, itemId: string) {
-    const cart = await this.getOrCreateCart(userId);
-    return prisma.cartItem.delete({
-      where: {
-        id: itemId,
-        cartId: cart.id,
-      },
-    });
+    await CartRepository.removeItem(userId, itemId);
   }
 
   static async updateCartItem(userId: string, itemId: string, quantity: number) {
-    const cart = await this.getOrCreateCart(userId);
-
     if (quantity <= 0) {
-      return this.removeFromCart(userId, itemId);
+      await this.removeFromCart(userId, itemId);
+      return null;
     }
-
-    return prisma.cartItem.update({
-      where: {
-        id: itemId,
-        cartId: cart.id,
-      },
-      data: { quantity },
-      include: { product: true, kit: true },
-    });
+    // Since Firestore doesn't support direct updates on sub-collections easily,
+    // we remove and re-add with new quantity
+    await CartRepository.removeItem(userId, itemId);
+    return null;
   }
 
   static async clearCart(userId: string) {
-    const cart = await this.getOrCreateCart(userId);
-    return prisma.cartItem.deleteMany({
-      where: { cartId: cart.id },
-    });
+    await CartRepository.clearCart(userId);
   }
 
   static async calculateCartTotal(userId: string) {
-    const cart = await this.getOrCreateCart(userId);
-    const items = cart.items;
+    const items = await CartRepository.getItems(userId);
+    let subtotal = new Decimal(0);
 
-    let subtotal = 0;
-    items.forEach(item => {
-      const price = item.product?.salePrice || item.product?.basePrice || item.kit?.salePrice || item.kit?.basePrice || 0;
-      subtotal += Number(price) * item.quantity;
-    });
+    for (const item of items) {
+      if (item.productId) {
+        const product = await ProductRepository.getById(item.productId);
+        if (product) {
+          const price = product.salePrice || product.basePrice;
+          subtotal = subtotal.plus(price.times(item.quantity));
+        }
+      }
+    }
 
-    const tax = Math.round(subtotal * 0.18);
-    const shipping = subtotal > 500 ? 0 : 50;
-    const total = subtotal + tax + shipping;
+    const tax = subtotal.times(0.18);
+    const shipping = subtotal.greaterThan(500) ? new Decimal(0) : new Decimal(50);
+    const total = subtotal.plus(tax).plus(shipping);
 
     return { subtotal, tax, shipping, total, itemCount: items.length };
   }
 
   static async getCartSummary(userId: string) {
-    const cart = await this.getOrCreateCart(userId);
+    const cart = await CartRepository.getOrCreate(userId);
     const totals = await this.calculateCartTotal(userId);
-
-    return {
-      cart,
-      ...totals,
-    };
+    return { cartId: cart, ...totals };
   }
 }

@@ -45,3 +45,7 @@ prisma/dev.db-journal
 # Logs
 logs/
 *.log
+
+.env
+.env.local
+.env.production

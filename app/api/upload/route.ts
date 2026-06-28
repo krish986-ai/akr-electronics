@@ -1,6 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { storageService } from '@/lib/storage/storage-service';
-import { imageUploadSchema, validateImageFile } from '@/lib/validation/image-validation';
+import { validateImageFile } from '@/lib/validation/image-validation';
 
 export async function POST(req: NextRequest) {
   try {

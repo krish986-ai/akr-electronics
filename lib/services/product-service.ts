@@ -1,216 +1,90 @@
-import { prisma } from '@/lib/prisma';
+import { ProductRepository, Product } from '@/lib/firestore/repositories';
 import { CreateProductInput, UpdateProductInput, ProductFilterInput } from '@/lib/validation/product-validation';
-import { Prisma } from '@prisma/client';
+import { Decimal } from 'decimal.js';
 
 export class ProductService {
-  static async createProduct(data: CreateProductInput & { slug?: string; sku?: string }) {
+  static async createProduct(data: CreateProductInput & { slug?: string; sku?: string }): Promise<Product> {
     const slug = data.slug || this.generateSlug(data.name);
-    const sku = data.sku || this.generateSKU(data.categoryId);
+    const sku = data.sku || this.generateSKU();
 
-    return prisma.product.create({
-      data: {
-        name: data.name,
-        slug,
-        sku,
-        description: data.description,
-        shortDescription: data.shortDescription,
-        basePrice: new Prisma.Decimal(data.basePrice),
-        salePrice: data.salePrice ? new Prisma.Decimal(data.salePrice) : null,
-        discountPercent: data.discountPercent,
-        stock: data.stock,
-        lowStockLimit: data.lowStockLimit,
-        weight: data.weight ? new Prisma.Decimal(data.weight) : null,
-        dimensions: data.dimensions,
-        specifications: data.specifications,
-        categoryId: data.categoryId,
-        brandId: data.brandId || null,
-        seoTitle: data.seoTitle,
-        seoDescription: data.seoDescription,
-        seoKeywords: data.seoKeywords,
-        isFeatured: data.isFeatured,
-        isNewArrival: data.isNewArrival,
-        isBestseller: data.isBestseller,
-        visibility: data.visibility,
-        status: data.status,
-      },
-      include: { category: true, brand: true },
-    });
-  }
-
-  static async getProductById(id: string) {
-    return prisma.product.findUnique({
-      where: { id },
-      include: {
-        category: true,
-        brand: true,
-        images: { orderBy: { displayOrder: 'asc' } },
-        reviews: { take: 5, orderBy: { createdAt: 'desc' } },
-      },
-    });
-  }
-
-  static async getProductBySlug(slug: string) {
-    return prisma.product.findUnique({
-      where: { slug },
-      include: {
-        category: true,
-        brand: true,
-        images: { orderBy: { displayOrder: 'asc' } },
-        reviews: { take: 5, orderBy: { createdAt: 'desc' } },
-      },
-    });
-  }
-
-  static async updateProduct(id: string, data: UpdateProductInput) {
-    const updateData: Prisma.ProductUpdateInput = {
+    return ProductRepository.create({
       name: data.name,
+      slug,
+      sku,
       description: data.description,
       shortDescription: data.shortDescription,
-      basePrice: data.basePrice ? new Prisma.Decimal(data.basePrice) : undefined,
-      salePrice: data.salePrice !== undefined ? (data.salePrice ? new Prisma.Decimal(data.salePrice) : null) : undefined,
+      basePrice: new Decimal(data.basePrice),
+      salePrice: data.salePrice ? new Decimal(data.salePrice) : undefined,
       discountPercent: data.discountPercent,
       stock: data.stock,
-      lowStockLimit: data.lowStockLimit,
-      weight: data.weight ? new Prisma.Decimal(data.weight) : undefined,
-      dimensions: data.dimensions,
-      specifications: data.specifications,
+      lowStockLimit: data.lowStockLimit || 10,
       categoryId: data.categoryId,
-      brandId: data.brandId,
-      seoTitle: data.seoTitle,
-      seoDescription: data.seoDescription,
-      seoKeywords: data.seoKeywords,
-      isFeatured: data.isFeatured,
-      isNewArrival: data.isNewArrival,
-      isBestseller: data.isBestseller,
-      visibility: data.visibility,
-      status: data.status,
-    };
-
-    Object.keys(updateData).forEach(key => {
-      if (updateData[key as keyof typeof updateData] === undefined) {
-        delete updateData[key as keyof typeof updateData];
-      }
-    });
-
-    return prisma.product.update({
-      where: { id },
-      data: updateData,
-      include: { category: true, brand: true },
-    });
-  }
-
-  static async deleteProduct(id: string) {
-    return prisma.product.update({
-      where: { id },
-      data: { isDeleted: true, deletedAt: new Date() },
-    });
-  }
-
-  static async restoreProduct(id: string) {
-    return prisma.product.update({
-      where: { id },
-      data: { isDeleted: false, deletedAt: null },
-    });
-  }
-
-  static async publishProduct(id: string) {
-    return prisma.product.update({
-      where: { id },
-      data: { visibility: 'PUBLIC' },
-    });
-  }
-
-  static async unpublishProduct(id: string) {
-    return prisma.product.update({
-      where: { id },
-      data: { visibility: 'DRAFT' },
-    });
-  }
-
-  static async listProducts(filters: ProductFilterInput) {
-    const where: Prisma.ProductWhereInput = {
+      brandId: data.brandId || undefined,
+      isFeatured: data.isFeatured || false,
+      isNewArrival: data.isNewArrival || false,
+      isBestseller: data.isBestseller || false,
+      visibility: data.visibility || 'DRAFT',
+      status: data.status || 'ACTIVE',
       isDeleted: false,
-    };
+      viewCount: 0,
+      displayOrder: 0,
+    });
+  }
 
-    if (filters.search) {
-      where.OR = [
-        { name: { contains: filters.search, mode: 'insensitive' } },
-        { sku: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
-      ];
-    }
+  static async getProductById(id: string): Promise<Product | null> {
+    return ProductRepository.getById(id);
+  }
 
-    if (filters.categoryId) where.categoryId = filters.categoryId;
-    if (filters.brandId) where.brandId = filters.brandId;
-    if (filters.status) where.status = filters.status;
-    if (filters.isFeatured !== undefined) where.isFeatured = filters.isFeatured;
+  static async updateProduct(id: string, data: UpdateProductInput): Promise<Product | null> {
+    const updates: Partial<Product> = {};
+    if (data.name) updates.name = data.name;
+    if (data.description) updates.description = data.description;
+    if (data.basePrice) updates.basePrice = new Decimal(data.basePrice);
+    if (data.salePrice) updates.salePrice = new Decimal(data.salePrice);
+    if (data.stock !== undefined) updates.stock = data.stock;
+    if (data.categoryId) updates.categoryId = data.categoryId;
+    if (data.status) updates.status = data.status;
+    if (data.visibility) updates.visibility = data.visibility;
+    if (data.isFeatured !== undefined) updates.isFeatured = data.isFeatured;
 
-    if (filters.minPrice || filters.maxPrice) {
-      where.basePrice = {};
-      if (filters.minPrice) where.basePrice.gte = new Prisma.Decimal(filters.minPrice);
-      if (filters.maxPrice) where.basePrice.lte = new Prisma.Decimal(filters.maxPrice);
-    }
+    updates.updatedAt = new Date();
+    await ProductRepository.update(id, updates);
+    return ProductRepository.getById(id);
+  }
 
-    const skip = (filters.page - 1) * filters.limit;
-    const orderBy: Prisma.ProductOrderByWithRelationInput = {};
-    orderBy[filters.sortBy] = filters.sortOrder;
+  static async deleteProduct(id: string): Promise<void> {
+    await ProductRepository.update(id, { isDeleted: true });
+  }
 
-    const [products, total] = await Promise.all([
-      prisma.product.findMany({
-        where,
-        include: { category: true, brand: true },
-        skip,
-        take: filters.limit,
-        orderBy,
-      }),
-      prisma.product.count({ where }),
-    ]);
+  static async publishProduct(id: string): Promise<void> {
+    await ProductRepository.update(id, { visibility: 'PUBLIC' });
+  }
 
-    return {
-      products,
-      pagination: {
-        total,
-        page: filters.page,
-        limit: filters.limit,
-        pages: Math.ceil(total / filters.limit),
-      },
+  static async listProducts(filters: ProductFilterInput = {}): Promise<{ products: Product[]; total: number; page: number; pages: number }> {
+    const products = await ProductRepository.list(filters.limit || 20);
+    return { 
+      products: products, 
+      total: products.length,
+      page: 1,
+      pages: 1
     };
   }
 
-  static async searchProducts(query: string, limit: number = 10) {
-    return prisma.product.findMany({
-      where: {
-        isDeleted: false,
-        visibility: 'PUBLIC',
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { sku: { contains: query, mode: 'insensitive' } },
-        ],
-      },
-      take: limit,
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        sku: true,
-        basePrice: true,
-        thumbnailImage: true,
-      },
-    });
+  static async searchProducts(query: string, limit: number = 10): Promise<Product[]> {
+    const products = await ProductRepository.list(limit);
+    return products.filter(p => 
+      p.name.toLowerCase().includes(query.toLowerCase()) ||
+      p.sku.toLowerCase().includes(query.toLowerCase())
+    );
   }
 
   private static generateSlug(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-');
+    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
   }
 
-  private static generateSKU(categoryId: string): string {
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  private static generateSKU(): string {
+    const timestamp = Date.now().toString().slice(-8);
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
     return `SKU-${timestamp}-${random}`;
   }
 }

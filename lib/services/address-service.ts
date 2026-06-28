@@ -1,65 +1,26 @@
-import { prisma } from '@/lib/prisma';
+import { AddressRepository } from '@/lib/firestore/repositories';
 import { CreateAddressInput, UpdateAddressInput } from '@/lib/validation/address-validation';
 
 export class AddressService {
   static async createAddress(userId: string, data: CreateAddressInput) {
-    if (data.isDefault) {
-      await prisma.address.updateMany({
-        where: { userId, isDefault: true },
-        data: { isDefault: false },
-      });
-    }
-
-    return prisma.address.create({
-      data: {
-        ...data,
-        userId,
-      },
-    });
+    return AddressRepository.create(userId, { ...data, isDefault: data.isDefault || false });
   }
 
   static async getAddresses(userId: string) {
-    return prisma.address.findMany({
-      where: { userId },
-      orderBy: { isDefault: 'desc' },
-    });
-  }
-
-  static async getDefaultAddress(userId: string) {
-    return prisma.address.findFirst({
-      where: { userId, isDefault: true },
-    });
+    return AddressRepository.getAddresses(userId);
   }
 
   static async updateAddress(userId: string, addressId: string, data: UpdateAddressInput) {
-    if (data.isDefault) {
-      await prisma.address.updateMany({
-        where: { userId, id: { not: addressId }, isDefault: true },
-        data: { isDefault: false },
-      });
-    }
-
-    return prisma.address.update({
-      where: { id: addressId, userId },
-      data,
-    });
+    await AddressRepository.update(userId, addressId, data as any);
+    return AddressRepository.getAddresses(userId);
   }
 
   static async deleteAddress(userId: string, addressId: string) {
-    return prisma.address.delete({
-      where: { id: addressId, userId },
-    });
+    await AddressRepository.delete(userId, addressId);
   }
 
-  static async setDefaultAddress(userId: string, addressId: string) {
-    await prisma.address.updateMany({
-      where: { userId, isDefault: true },
-      data: { isDefault: false },
-    });
-
-    return prisma.address.update({
-      where: { id: addressId, userId },
-      data: { isDefault: true },
-    });
+  static async getDefaultAddress(userId: string) {
+    const addresses = await AddressRepository.getAddresses(userId);
+    return addresses.find(a => a.isDefault) || null;
   }
 }

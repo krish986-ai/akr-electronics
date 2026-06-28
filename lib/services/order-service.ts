@@ -1,127 +1,53 @@
-import { prisma } from '@/lib/prisma';
+import { OrderRepository, ProductRepository } from '@/lib/firestore/repositories';
 import { CreateOrderInput } from '@/lib/validation/checkout-validation';
-import { InventoryService } from './inventory-service';
-import { Prisma } from '@prisma/client';
+import { Decimal } from 'decimal.js';
 
 export class OrderService {
   static async createOrder(userId: string, data: CreateOrderInput) {
     const orderNumber = this.generateOrderNumber();
-
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        userId,
-        orderStatus: 'PENDING',
-        paymentStatus: 'PENDING',
-        shippingStatus: 'PENDING',
-        shippingAddressId: data.shippingAddressId,
-        billingAddressId: data.billingAddressId,
-        subtotal: new Prisma.Decimal(data.subtotal),
-        tax: new Prisma.Decimal(data.tax),
-        shippingCost: new Prisma.Decimal(data.shippingCost),
-      },
+    
+    const order = await OrderRepository.create({
+      orderNumber,
+      userId,
+      shippingAddressId: data.shippingAddressId,
+      billingAddressId: data.billingAddressId,
+      orderStatus: 'PENDING',
+      paymentStatus: 'PENDING',
+      subtotal: new Decimal(data.subtotal),
+      tax: new Decimal(data.tax),
+      shippingCost: new Decimal(data.shippingCost),
     });
 
-    await Promise.all(
-      data.cartItems.map(item =>
-        prisma.orderItem.create({
-          data: {
-            orderId: order.id,
-            productId: item.productId || null,
-            kitId: item.kitId || null,
-            quantity: item.quantity,
-            price: new Prisma.Decimal(item.price),
-          },
-        })
-      )
-    );
+    // Deduct inventory for each product
+    for (const item of data.cartItems) {
+      if (item.productId) {
+        const product = await ProductRepository.getById(item.productId);
+        if (product) {
+          await ProductRepository.update(item.productId, {
+            stock: product.stock - item.quantity,
+          });
+        }
+      }
+    }
 
-    await Promise.all(
-      data.cartItems.map(item =>
-        InventoryService.updateStock(
-          item.productId || '',
-          -item.quantity,
-          'PURCHASE',
-          `Order ${orderNumber}`,
-          order.id
-        ).catch(() => null)
-      )
-    );
-
-    return this.getOrderById(order.id);
+    return order;
   }
 
   static async getOrderById(orderId: string) {
-    return prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: {
-          include: {
-            product: { select: { name: true, sku: true } },
-            kit: { select: { name: true } },
-          },
-        },
-        user: { select: { name: true, email: true } },
-        shippingAddress: true,
-        billingAddress: true,
-      },
-    });
+    return OrderRepository.getById(orderId);
   }
 
-  static async getUserOrders(userId: string, limit: number = 10) {
-    return prisma.order.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      include: {
-        items: {
-          select: { quantity: true, price: true },
-        },
-      },
-    });
+  static async getUserOrders(userId: string) {
+    return OrderRepository.getUserOrders(userId);
   }
 
   static async updateOrderStatus(orderId: string, status: string) {
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { orderStatus: status as any },
-    });
-  }
-
-  static async updatePaymentStatus(orderId: string, status: string, paymentId?: string) {
-    return prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: status as any,
-        paymentId: paymentId || undefined,
-      },
-    });
-  }
-
-  static async updateShippingStatus(orderId: string, status: string) {
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { shippingStatus: status as any },
-    });
+    await OrderRepository.updateStatus(orderId, status);
+    return OrderRepository.getById(orderId);
   }
 
   static async cancelOrder(orderId: string) {
-    const order = await this.getOrderById(orderId);
-    if (!order) throw new Error('Order not found');
-
-    await Promise.all(
-      order.items.map(item =>
-        InventoryService.releaseReservedStock(
-          item.productId || '',
-          item.quantity
-        ).catch(() => null)
-      )
-    );
-
-    return prisma.order.update({
-      where: { id: orderId },
-      data: { orderStatus: 'CANCELLED' },
-    });
+    await OrderRepository.updateStatus(orderId, 'CANCELLED');
   }
 
   private static generateOrderNumber(): string {
