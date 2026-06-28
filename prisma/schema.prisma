@@ -5,10 +5,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-generator erd {
-  provider = "prisma-erd-generator"
-}
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -63,7 +59,6 @@ model Product {
 
   @@index([categoryId])
   @@index([isActive])
-  @@fulltext([name, description])
 }
 
 // Product Category
@@ -137,8 +132,10 @@ model Order {
   tax             Float
   shipping        Float
   total           Float
-  shippingAddress Address?     @relation("ShippingAddress")
-  billingAddress  Address?     @relation("BillingAddress")
+  shippingAddressId String?
+  shippingAddress Address?     @relation("ShippingAddress", fields: [shippingAddressId], references: [id])
+  billingAddressId String?
+  billingAddress  Address?     @relation("BillingAddress", fields: [billingAddressId], references: [id])
   notes           String?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
