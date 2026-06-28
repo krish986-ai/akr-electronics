@@ -1,11 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { getTokenFromRequest, authSuccessResponse, authErrorResponse } from '@/lib/auth/middleware';
+import { userService } from '@/lib/auth/user-service';
+import { firebaseAuthService } from '@/lib/auth/firebase';
 
-export async function POST(_req: NextRequest) {
-  // In a real app, invalidate the session/token
-  // For now, just return success - client will remove token from localStorage
+export async function POST(req: NextRequest) {
+  try {
+    // Get token
+    const token = getTokenFromRequest(req);
 
-  return NextResponse.json(
-    { success: true, message: 'Logged out successfully' },
-    { status: 200 }
-  );
+    // Invalidate session in database if token exists
+    if (token) {
+      await userService.invalidateSession(token);
+    }
+
+    // Firebase logout
+    await firebaseAuthService.logout();
+
+    const response = authSuccessResponse({
+      message: 'Logged out successfully',
+    });
+
+    // Clear auth cookie
+    response.cookies.delete('auth-token');
+
+    return response;
+  } catch (error) {
+    console.error('Logout error:', error);
+    const response = authErrorResponse('Logout failed', 500);
+    response.cookies.delete('auth-token');
+    return response;
+  }
 }

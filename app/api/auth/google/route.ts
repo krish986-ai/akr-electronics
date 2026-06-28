@@ -1,25 +1,37 @@
 import { NextRequest } from 'next/server';
 import { firebaseAuthService, FirebaseAuthError } from '@/lib/auth/firebase';
-import { loginSchema } from '@/lib/auth/validation';
 import { userService } from '@/lib/auth/user-service';
 import { authSuccessResponse, authErrorResponse, generateSessionToken } from '@/lib/auth/middleware';
 
 export async function POST(req: NextRequest) {
   try {
+    // In production, the frontend will handle Google login through Firebase
+    // This endpoint serves as a backup for server-side token verification
     const body = await req.json();
+    const { idToken } = body;
 
-    // Validate input
-    const parsed = loginSchema.safeParse(body);
-    if (!parsed.success) {
-      return authErrorResponse('Invalid credentials', 400);
+    if (!idToken) {
+      return authErrorResponse('Missing ID token', 400);
     }
 
-    const { email, password } = parsed.data;
+    // Get current Firebase user
+    const firebaseUser = firebaseAuthService.getCurrentUser();
+    if (!firebaseUser) {
+      return authErrorResponse('No authenticated user', 401);
+    }
 
-    // Get user from database
-    const user = await userService.getUserByEmail(email);
+    // Check if user exists in database
+    let user = await userService.getUserByFirebaseUid(firebaseUser.uid);
+
+    // Create user if doesn't exist
     if (!user) {
-      return authErrorResponse('Invalid credentials', 401);
+      user = await userService.createUserFromFirebase(
+        firebaseUser.email || '',
+        firebaseUser.uid,
+        firebaseUser.displayName || 'User',
+        undefined,
+        firebaseUser.photoURL || undefined
+      );
     }
 
     // Check if user is active
@@ -27,17 +39,8 @@ export async function POST(req: NextRequest) {
       return authErrorResponse('Account is not active', 403);
     }
 
-    // Login with Firebase
-    await firebaseAuthService.loginWithEmail(email, password);
-
     // Update login tracking
     await userService.updateLoginTracking(user.id, true);
-
-    // Get ID token for session
-    const idToken = await firebaseAuthService.getIdToken();
-    if (!idToken) {
-      return authErrorResponse('Failed to create session', 500);
-    }
 
     // Create session in database
     const sessionToken = generateSessionToken();
@@ -69,15 +72,9 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof FirebaseAuthError) {
-      // Log failed login attempt
-      const body = await req.json().catch(() => ({}));
-      const user = await userService.getUserByEmail(body.email).catch(() => null);
-      if (user) {
-        await userService.updateLoginTracking(user.id, false);
-      }
-      return authErrorResponse(error.message, 401);
+      return authErrorResponse(error.message, 400);
     }
-    console.error('Login error:', error);
-    return authErrorResponse('Login failed', 500);
+    console.error('Google login error:', error);
+    return authErrorResponse('Google login failed', 500);
   }
 }

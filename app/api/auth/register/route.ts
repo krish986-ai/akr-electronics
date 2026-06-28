@@ -1,6 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { NextRequest } from 'next/server';
+import { firebaseAuthService, FirebaseAuthError } from '@/lib/auth/firebase';
 import { registerSchema } from '@/lib/auth/validation';
+import { userService } from '@/lib/auth/user-service';
+import { authSuccessResponse, authErrorResponse, generateSessionToken } from '@/lib/auth/middleware';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,67 +11,70 @@ export async function POST(req: NextRequest) {
     // Validate input
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: 'Validation failed', details: parsed.error.errors },
-        { status: 400 }
-      );
+      return authErrorResponse('Invalid input data', 400);
     }
 
-    const { email, name } = parsed.data;
+    const { email, password, name, phone } = parsed.data;
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    // Check if user already exists in database
+    const existingUser = await userService.getUserByEmail(email);
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email already registered' },
-        { status: 409 }
-      );
+      return authErrorResponse('Email already registered', 409);
     }
 
-    // In production, hash password with bcrypt
-    // For now, we'll store it plainly (NOT SECURE - Phase 2 will add proper hashing)
-    const user = await prisma.user.create({
-      data: {
-        email,
-        name,
-        // Password would be hashed here in production
-        // password: await bcrypt.hash(password, 10),
-      },
-    });
+    // Create Firebase user
+    const firebaseUser = await firebaseAuthService.registerWithEmail(email, password);
 
-    // Create cart for new user
-    await prisma.cart.create({
-      data: {
-        userId: user.id,
-      },
-    });
+    // Create user in database
+    const user = await userService.createUserFromFirebase(
+      email,
+      firebaseUser.uid,
+      name,
+      phone
+    );
 
-    // Generate token (simple JWT-like token - Phase 2 will use proper JWT)
-    const token = Buffer.from(
-      JSON.stringify({ userId: user.id, email: user.email })
-    ).toString('base64');
+    // Get ID token for session
+    const idToken = await firebaseAuthService.getIdToken();
+    if (!idToken) {
+      return authErrorResponse('Failed to create session', 500);
+    }
 
-    return NextResponse.json(
+    // Create session in database
+    const sessionToken = generateSessionToken();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+
+    await userService.createSession(
+      user.id,
+      sessionToken,
+      expiresAt,
+      req.headers.get('x-forwarded-for') || undefined,
+      req.headers.get('user-agent') || undefined
+    );
+
+    const response = authSuccessResponse(
       {
-        success: true,
-        user: {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        },
-        token,
+        user: userService.toAuthUser(user),
+        token: sessionToken,
       },
-      { status: 201 }
+      201
     );
+
+    // Set secure cookie
+    response.cookies.set({
+      name: 'auth-token',
+      value: sessionToken,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60, // 30 days
+    });
+
+    return response;
   } catch (error) {
+    if (error instanceof FirebaseAuthError) {
+      return authErrorResponse(error.message, 400);
+    }
     console.error('Registration error:', error);
-    return NextResponse.json(
-      { error: 'Registration failed' },
-      { status: 500 }
-    );
+    return authErrorResponse('Registration failed', 500);
   }
 }
