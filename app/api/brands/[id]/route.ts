@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BrandService } from '@/lib/services/brand-service';
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   props: { params: Promise<{ id: string }> }
 ) {
   const { id } = await props.params;

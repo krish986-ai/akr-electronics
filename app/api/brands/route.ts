@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BrandService } from '@/lib/services/brand-service';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const brands = await BrandService.listBrands();
 

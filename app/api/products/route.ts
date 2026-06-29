@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ProductService } from '@/lib/services/product-service';
-import { CategoryService } from '@/lib/services/category-service';
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,7 +53,6 @@ export async function GET(req: NextRequest) {
         limit: result.pages > 0 ? limit : 0,
         total: result.total,
         pages: result.pages,
-        hasMore: result.hasMore,
       },
     });
   } catch (error) {

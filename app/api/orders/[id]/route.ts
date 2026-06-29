@@ -28,8 +28,6 @@ export async function GET(
       success: true,
       data: {
         ...order,
-        basePrice: order.basePrice.toString(),
-        salePrice: order.salePrice?.toString(),
         subtotal: order.subtotal.toString(),
         tax: order.tax.toString(),
         shippingCost: order.shippingCost.toString(),
@@ -76,14 +74,13 @@ export async function PUT(
 
     return NextResponse.json({
       success: true,
-      data: {
+      data: order ? {
         ...order,
-        basePrice: order?.basePrice.toString(),
-        subtotal: order?.subtotal.toString(),
-        tax: order?.tax.toString(),
-        shippingCost: order?.shippingCost.toString(),
-        total: order?.total.toString(),
-      },
+        subtotal: order.subtotal.toString(),
+        tax: order.tax.toString(),
+        shippingCost: order.shippingCost.toString(),
+        total: order.total.toString(),
+      } : null,
     });
   } catch (error) {
     console.error('Update order error:', error);

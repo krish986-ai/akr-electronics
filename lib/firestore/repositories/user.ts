@@ -25,18 +25,19 @@ export interface User {
 }
 
 export class UserRepository {
-  static async create(data: Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'loginCount' | 'failedLoginAttempts'>): Promise<User> {
+  static async create(data: { id: string } & Omit<User, 'id' | 'createdAt' | 'updatedAt' | 'loginCount' | 'failedLoginAttempts'>): Promise<User> {
     const now = new Date();
-    const user = {
-      ...data,
-      id: data.id || '',
+    const { id, ...rest } = data;
+    const user: User = {
+      ...rest,
+      id,
       loginCount: 0,
       failedLoginAttempts: 0,
       createdAt: now,
       updatedAt: now,
     };
-    await setDoc(doc(db, 'users', data.id), this.toFirestore(user));
-    return user as User;
+    await setDoc(doc(db, 'users', id), this.toFirestore(user));
+    return user;
   }
 
   static async getById(id: string): Promise<User | null> {

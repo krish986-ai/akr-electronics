@@ -14,7 +14,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const [products, orders, customers, categories, brands] = await Promise.all([
+    const { Decimal } = require('decimal.js');
+
+    const [productsResult, orders, customers, categories, brands] = await Promise.all([
       ProductRepository.list({ limit: 1000 }),
       OrderRepository.listAll(1000),
       UserRepository.listCustomers(1000),
@@ -22,21 +24,21 @@ export async function GET(req: NextRequest) {
       BrandRepository.listAll(1000),
     ]);
 
-    const recentOrders = orders.products.slice(0, 5);
-    const totalRevenue = orders.products.reduce((sum, order) => sum.plus(order.total), require('decimal.js').Decimal(0));
-    const totalOrders = orders.products.length;
-    const totalProducts = products.products.length;
+    const recentOrders = orders.slice(0, 5);
+    const totalRevenue = orders.reduce((sum: any, order: any) => sum.plus(order.total), new Decimal('0'));
+    const totalOrders = orders.length;
+    const totalProducts = productsResult.products.length;
     const totalCustomers = customers.length;
     const totalCategories = categories.length;
     const totalBrands = brands.length;
 
-    const ordersThisMonth = orders.products.filter(o => {
+    const ordersThisMonth = orders.filter((o: any) => {
       const today = new Date();
       const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
       return o.createdAt >= firstDayOfMonth;
     }).length;
 
-    const lowStockProducts = products.products.filter(p => p.stock <= p.lowStockLimit).slice(0, 5);
+    const lowStockProducts = productsResult.products.filter((p: any) => p.stock <= p.lowStockLimit).slice(0, 5);
 
     return NextResponse.json({
       success: true,
