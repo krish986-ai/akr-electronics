@@ -1,5 +1,5 @@
 import { collection, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 
 export interface Address {
   id: string;
@@ -20,6 +20,7 @@ export interface Address {
 
 export class AddressRepository {
   static async create(userId: string, data: Omit<Address, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<Address> {
+    const db = getDb();
     const addrRef = doc(collection(db, 'users', userId, 'addresses'));
     const now = new Date();
     const address = { ...data, id: addrRef.id, userId, createdAt: now, updatedAt: now };
@@ -28,11 +29,13 @@ export class AddressRepository {
   }
 
   static async getById(userId: string, addressId: string): Promise<Address | null> {
+    const db = getDb();
     const snapshot = await getDoc(doc(db, 'users', userId, 'addresses', addressId));
     return snapshot.exists() ? this.fromFirestore(snapshot, userId) : null;
   }
 
   static async getAddresses(userId: string): Promise<Address[]> {
+    const db = getDb();
     const snapshot = await getDocs(collection(db, 'users', userId, 'addresses'));
     return snapshot.docs.map(d => this.fromFirestore(d, userId));
   }
@@ -42,11 +45,13 @@ export class AddressRepository {
   }
 
   static async update(userId: string, addressId: string, data: Partial<Address>): Promise<void> {
+    const db = getDb();
     const updates = { ...data, updatedAt: new Date() };
     await updateDoc(doc(db, 'users', userId, 'addresses', addressId), updates);
   }
 
   static async delete(userId: string, addressId: string): Promise<void> {
+    const db = getDb();
     await deleteDoc(doc(db, 'users', userId, 'addresses', addressId));
   }
 
