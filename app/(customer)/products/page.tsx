@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -24,7 +25,7 @@ export default function ProductsPage() {
   const itemsPerPage = 12;
 
   const filtered = useMemo(() => {
-    let result = products.filter(p => {
+    const result = products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = !selectedCategory || p.category === selectedCategory;
       const matchesPrice = p.price >= priceRange[0] && p.price <= priceRange[1];
@@ -58,7 +59,7 @@ export default function ProductsPage() {
     <div className={cn(container, 'py-8')}>
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 text-sm text-neutral-600">
-        <a href="/" className="hover:text-neutral-900">Home</a>
+        <Link href="/" className="hover:text-neutral-900">Home</Link>
         <span>/</span>
         <span>Products</span>
       </div>

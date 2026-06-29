@@ -1,7 +1,6 @@
 import { getRazorpayClient } from '@/lib/payment/razorpay';
 import { OrderRepository } from '@/lib/firestore/repositories';
 import { Decimal } from 'decimal.js';
-import crypto from 'crypto';
 
 interface CreatePaymentOrderInput {
   orderId: string;
@@ -112,12 +111,10 @@ export class PaymentService {
       }
 
       // Step 5: Update order with payment details
-      await OrderRepository.update(data.orderId, {
-        paymentStatus: 'COMPLETED',
+      await (OrderRepository as any).updatePaymentStatus(data.orderId, 'COMPLETED', {
         paymentId: data.paymentId,
         transactionId: payment.id,
-        updatedAt: new Date(),
-      } as any);
+      });
 
       return true;
     } catch (error) {
@@ -211,7 +208,7 @@ export class PaymentService {
         order.total.toNumber()
       );
 
-      await OrderRepository.updatePaymentStatus(orderId, 'REFUND_REQUESTED');
+      await OrderRepository.updatePaymentStatus(orderId, 'REFUNDED');
 
       return refund;
     } catch (error) {

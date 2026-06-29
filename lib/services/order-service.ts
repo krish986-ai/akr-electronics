@@ -5,7 +5,11 @@ import { Decimal } from 'decimal.js';
 export class OrderService {
   static async createOrder(userId: string, data: CreateOrderInput) {
     const orderNumber = this.generateOrderNumber();
-    
+    const subtotal = new Decimal(data.subtotal);
+    const tax = new Decimal(data.tax);
+    const shippingCost = new Decimal(data.shippingCost);
+    const total = subtotal.plus(tax).plus(shippingCost);
+
     const order = await OrderRepository.create({
       orderNumber,
       userId,
@@ -13,9 +17,12 @@ export class OrderService {
       billingAddressId: data.billingAddressId,
       orderStatus: 'PENDING',
       paymentStatus: 'PENDING',
-      subtotal: new Decimal(data.subtotal),
-      tax: new Decimal(data.tax),
-      shippingCost: new Decimal(data.shippingCost),
+      subtotal,
+      tax,
+      shippingCost,
+      total,
+      shippingStatus: 'PENDING',
+      isDeleted: false,
     });
 
     // Deduct inventory for each product
@@ -41,7 +48,7 @@ export class OrderService {
     return OrderRepository.getUserOrders(userId);
   }
 
-  static async updateOrderStatus(orderId: string, status: string) {
+  static async updateOrderStatus(orderId: string, status: 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED') {
     await OrderRepository.updateStatus(orderId, status);
     return OrderRepository.getById(orderId);
   }

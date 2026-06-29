@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, doc, setDoc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 
 export interface InventoryHistory {

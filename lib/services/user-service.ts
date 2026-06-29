@@ -59,6 +59,7 @@ export class UserService {
       role: data.role || 'CUSTOMER',
       status: 'ACTIVE',
       emailVerified: false,
+      isDeleted: false,
     });
   }
 

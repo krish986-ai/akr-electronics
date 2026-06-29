@@ -1,6 +1,5 @@
 import {
-  collection, query, where, orderBy, limit, startAfter, getDocs, getDoc, doc, setDoc, updateDoc,
-  DocumentSnapshot, Query
+  collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { Decimal } from 'decimal.js';

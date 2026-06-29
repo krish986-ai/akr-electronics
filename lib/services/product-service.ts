@@ -15,7 +15,7 @@ export class ProductService {
       shortDescription: data.shortDescription,
       basePrice: new Decimal(data.basePrice),
       salePrice: data.salePrice ? new Decimal(data.salePrice) : undefined,
-      discountPercent: data.discountPercent,
+      discountPercent: data.discountPercent || undefined,
       stock: data.stock,
       lowStockLimit: data.lowStockLimit || 10,
       categoryId: data.categoryId,
@@ -60,19 +60,35 @@ export class ProductService {
     await ProductRepository.update(id, { visibility: 'PUBLIC' });
   }
 
-  static async listProducts(filters: ProductFilterInput = {}): Promise<{ products: Product[]; total: number; page: number; pages: number }> {
-    const products = await ProductRepository.list(filters.limit || 20);
-    return { 
-      products: products, 
-      total: products.length,
-      page: 1,
-      pages: 1
+  static async listProducts(filters: Partial<ProductFilterInput> = {}): Promise<{ products: Product[]; total: number; page: number; pages: number }> {
+    const result = await ProductRepository.list({
+      limit: filters.limit || 20,
+      page: filters.page || 1,
+      sortBy: (filters.sortBy as any) || 'createdAt',
+      sortOrder: (filters.sortOrder as any) || 'desc',
+      categoryId: filters.categoryId,
+      brandId: filters.brandId,
+      isFeatured: filters.isFeatured,
+      minPrice: filters.minPrice,
+      maxPrice: filters.maxPrice,
+      status: filters.status as any,
+    });
+    return {
+      products: result.products || [],
+      total: result.total || 0,
+      page: result.page || 1,
+      pages: result.pages || 1
     };
   }
 
   static async searchProducts(query: string, limit: number = 10): Promise<Product[]> {
-    const products = await ProductRepository.list(limit);
-    return products.filter(p => 
+    const result = await ProductRepository.list({
+      limit,
+      page: 1,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
+    return (result.products || []).filter((p: Product) =>
       p.name.toLowerCase().includes(query.toLowerCase()) ||
       p.sku.toLowerCase().includes(query.toLowerCase())
     );

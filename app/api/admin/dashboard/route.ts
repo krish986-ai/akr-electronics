@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Decimal } from 'decimal.js';
 import {
   ProductRepository,
   OrderRepository,
@@ -13,8 +14,6 @@ export async function GET(req: NextRequest) {
     if (userRole !== 'ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-
-    const { Decimal } = require('decimal.js');
 
     const [productsResult, orders, customers, categories, brands] = await Promise.all([
       ProductRepository.list({ limit: 1000 }),

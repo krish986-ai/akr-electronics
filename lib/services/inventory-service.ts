@@ -16,8 +16,13 @@ export class InventoryService {
   }
 
   static async getLowStockProducts() {
-    const products = await ProductRepository.list(100);
-    return products.filter(p => p.stock <= p.lowStockLimit);
+    const result = await ProductRepository.list({
+      limit: 100,
+      page: 1,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
+    return (result.products || []).filter((p: any) => p.stock <= p.lowStockLimit);
   }
 
   static async releaseReservedStock(productId: string, quantity: number) {
