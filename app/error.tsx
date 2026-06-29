@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 
 export default function Error({
@@ -18,9 +19,9 @@ export default function Error({
         </p>
         <div className='flex gap-3 justify-center'>
           <Button onClick={() => reset()}>Try Again</Button>
-          <a href='/' className='inline-block'>
+          <Link href='/' className='inline-block'>
             <Button variant='outline'>Back to Home</Button>
-          </a>
+          </Link>
         </div>
       </div>
     </div>
