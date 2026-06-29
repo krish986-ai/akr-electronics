@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ProductService } from '@/lib/services/product-service';
+import { ReviewRepository } from '@/lib/firestore/repositories';
 
 export async function GET(
   _req: NextRequest,
@@ -6,31 +8,27 @@ export async function GET(
 ) {
   const { id } = await props.params;
   try {
-    const product = await prisma.product.findUnique({
-      where: { id },
-      include: {
-        category: true,
-        reviews: {
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
+    const product = await ProductService.getProductById(id);
 
     if (!product) {
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
+
+    const reviews = await ReviewRepository.listByProduct(id, 10);
 
     return NextResponse.json({
       success: true,
-      data: product,
+      data: {
+        ...product,
+        basePrice: product.basePrice.toString(),
+        salePrice: product.salePrice?.toString(),
+        reviews,
+      },
     });
   } catch (error) {
     console.error('Fetch product error:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch product' },
+      { error: 'Failed to fetch product', details: error instanceof Error ? error.message : '' },
       { status: 500 }
     );
   }
@@ -42,41 +40,62 @@ export async function PUT(
 ) {
   const { id } = await props.params;
   try {
-    const token = req.headers.get('authorization');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const userRole = req.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await req.json();
-    const { name, description, price, stock, categoryId, image, images, specification, isActive } = body;
+    const {
+      name,
+      description,
+      shortDescription,
+      basePrice,
+      salePrice,
+      discountPercent,
+      stock,
+      categoryId,
+      brandId,
+      status,
+      visibility,
+      isFeatured,
+      isNewArrival,
+      isBestseller,
+    } = body;
 
-    const product = await prisma.product.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(description && { description }),
-        ...(price !== undefined && { price: parseFloat(price) }),
-        ...(stock !== undefined && { stock: parseInt(stock) }),
-        ...(categoryId && { categoryId }),
-        ...(image && { image }),
-        ...(images && { images }),
-        ...(specification && { specification }),
-        ...(isActive !== undefined && { isActive }),
-      },
-      include: { category: true },
+    const product = await ProductService.updateProduct(id, {
+      name,
+      description,
+      shortDescription,
+      basePrice,
+      salePrice,
+      discountPercent,
+      stock,
+      categoryId,
+      brandId,
+      status,
+      visibility,
+      isFeatured,
+      isNewArrival,
+      isBestseller,
     });
+
+    if (!product) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
 
     return NextResponse.json({
       success: true,
-      data: product,
+      data: {
+        ...product,
+        basePrice: product.basePrice.toString(),
+        salePrice: product.salePrice?.toString(),
+      },
     });
   } catch (error) {
     console.error('Update product error:', error);
     return NextResponse.json(
-      { error: 'Failed to update product' },
+      { error: 'Failed to update product', details: error instanceof Error ? error.message : '' },
       { status: 500 }
     );
   }
@@ -88,17 +107,12 @@ export async function DELETE(
 ) {
   const { id } = await props.params;
   try {
-    const token = req.headers.get('authorization');
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const userRole = req.headers.get('x-user-role');
+    if (userRole !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    await prisma.product.delete({
-      where: { id },
-    });
+    await ProductService.deleteProduct(id);
 
     return NextResponse.json({
       success: true,
@@ -107,7 +121,7 @@ export async function DELETE(
   } catch (error) {
     console.error('Delete product error:', error);
     return NextResponse.json(
-      { error: 'Failed to delete product' },
+      { error: 'Failed to delete product', details: error instanceof Error ? error.message : '' },
       { status: 500 }
     );
   }
