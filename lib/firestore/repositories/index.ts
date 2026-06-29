@@ -1,4 +1,11 @@
 export { ProductRepository, type Product } from './product';
+export { CategoryRepository, type Category } from './category';
+export { BrandRepository, type Brand } from './brand';
+export { UserRepository, type User, type UserRole, type UserStatus } from './user';
+export { KitRepository, type IotKit, type KitComponent } from './kit';
+export { CouponRepository, type Coupon, type DiscountType } from './coupon';
+export { ReviewRepository, type Review } from './review';
+export { WebsiteConfigRepository, type WebsiteConfig } from './website-config';
 export { OrderRepository, type Order } from './order';
 export { CartRepository, type CartItem } from './cart';
 export { AddressRepository, type Address } from './address';
