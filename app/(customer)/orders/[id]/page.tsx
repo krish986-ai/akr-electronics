@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import React from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { Order } from '@/types';
 import { useAuth } from '@/lib/auth/client';
@@ -9,7 +8,7 @@ import { useAuth } from '@/lib/auth/client';
 export default function OrderDetailPage(props: {
   params: Promise<{ id: string }>;
 }) {
-  const params = React.use(props.params);
+  const params = use(props.params);
   const { isAuthenticated } = useAuth();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);

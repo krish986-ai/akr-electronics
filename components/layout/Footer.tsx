@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils/cn';
 import { container } from '@/lib/design/utils';
 

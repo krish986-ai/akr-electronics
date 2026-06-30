@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { SearchInput } from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';

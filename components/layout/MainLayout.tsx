@@ -1,4 +1,3 @@
-import React from 'react';
 import { cn } from '@/lib/utils/cn';
 import { Navbar, type NavbarProps } from './Navbar';
 import { Footer, type FooterProps } from './Footer';

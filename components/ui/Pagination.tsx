@@ -1,4 +1,4 @@
-import React from 'react';
+import { Fragment } from 'react';
 import { Button, IconButton } from './Button';
 
 interface PaginationProps {
@@ -62,7 +62,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, showPrevious
       )}
 
       {pageNumbers.map((page, idx) => (
-        <React.Fragment key={idx}>
+        <Fragment key={idx}>
           {page === '...' ? (
             <span className="px-2 py-1 text-neutral-500">...</span>
           ) : (
@@ -75,7 +75,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, showPrevious
               {page}
             </Button>
           )}
-        </React.Fragment>
+        </Fragment>
       ))}
 
       {showPreviousNext && (
