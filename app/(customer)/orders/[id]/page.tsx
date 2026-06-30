@@ -1,114 +1,100 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { Order } from '@/types';
+import { cn } from '@/lib/utils/cn';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth/client';
 
-export default function OrderDetailPage(props: {
-  params: Promise<{ id: string }>;
+const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
+
+// Mock orders data
+const mockOrders = [
+  {
+    id: '1',
+    orderNumber: 'ORD-2026-001',
+    createdAt: new Date('2026-06-25'),
+    total: 2450,
+    status: 'DELIVERED',
+    items: [
+      { id: '1', product: { name: 'Arduino Uno R3' }, quantity: 1, price: 450 },
+      { id: '2', product: { name: 'Raspberry Pi 4' }, quantity: 1, price: 4500 },
+    ],
+    subtotal: 2100,
+    tax: 378,
+    shipping: 0,
+    paymentStatus: 'PAID',
+  },
+  {
+    id: '2',
+    orderNumber: 'ORD-2026-002',
+    createdAt: new Date('2026-06-20'),
+    total: 1980,
+    status: 'SHIPPED',
+    items: [
+      { id: '1', product: { name: 'DHT22 Sensor' }, quantity: 2, price: 350 },
+      { id: '2', product: { name: 'ESP8266 WiFi Module' }, quantity: 1, price: 950 },
+    ],
+    subtotal: 1650,
+    tax: 297,
+    shipping: 50,
+    paymentStatus: 'PAID',
+  },
+];
+
+export default function OrderDetailPage({
+  params,
+}: {
+  params: { id: string };
 }) {
-  const params = use(props.params);
   const { isAuthenticated } = useAuth();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const fetchOrder = async () => {
-      try {
-        setIsLoading(true);
-        const token = localStorage.getItem('auth-token');
-
-        const response = await fetch(`/api/orders/${params.id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          setOrder(result.data);
-        } else {
-          setError('Failed to load order');
-        }
-      } catch (err) {
-        setError('An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchOrder();
-  }, [isAuthenticated, params.id]);
+  const order = mockOrders.find(o => o.id === params.id);
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Please login to view order</h1>
-          <Link
-            href="/auth/login"
-            className="inline-block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-          >
-            Login
-          </Link>
-        </div>
+      <div className={cn(container, 'py-12 text-center')}>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-4">Please login to view order</h1>
+        <Link href="/auth/login">
+          <Button>Login</Button>
+        </Link>
       </div>
     );
   }
 
-  if (isLoading) {
+  if (!order) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">Loading order...</div>
-      </div>
-    );
-  }
-
-  if (error || !order) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error || 'Order not found'}</p>
-          <Link
-            href="/orders"
-            className="text-blue-600 hover:underline"
-          >
-            Back to Orders
-          </Link>
-        </div>
+      <div className={cn(container, 'py-12 text-center')}>
+        <p className="text-red-600 mb-4">Order not found</p>
+        <Link href="/orders">
+          <Button variant="outline">Back to Orders</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <Link href="/orders" className="text-blue-600 hover:underline mb-4 inline-block">
-          ← Back to Orders
-        </Link>
+    <div className={cn(container, 'py-12')}>
+      <Link href="/orders" className="text-primary-600 hover:text-primary-700 mb-4 inline-block">
+        ← Back to Orders
+      </Link>
 
-        <div className="bg-white rounded-lg shadow p-8">
+      <Card className="mt-6">
+        <CardContent className="p-8">
           <div className="flex justify-between items-start mb-6 pb-6 border-b">
             <div>
-              <h1 className="text-3xl font-bold">{order.orderNumber}</h1>
-              <p className="text-gray-600">
-                {new Date(order.createdAt).toLocaleDateString()}
+              <h1 className="text-3xl font-bold text-neutral-900">{order.orderNumber}</h1>
+              <p className="text-neutral-600">
+                {order.createdAt.toLocaleDateString()}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-blue-600">
-                ₹{order.total.toFixed(2)}
+              <p className="text-3xl font-bold text-primary-600">
+                ₹{order.total.toLocaleString('en-IN')}
               </p>
-              <span className={`text-sm font-semibold ${
-                order.status === 'DELIVERED'
-                  ? 'text-green-600'
-                  : 'text-orange-600'
-              }`}>
+              <span className={cn(
+                'text-sm font-semibold',
+                order.status === 'DELIVERED' ? 'text-green-600' : 'text-orange-600'
+              )}>
                 {order.status}
               </span>
             </div>
@@ -116,21 +102,21 @@ export default function OrderDetailPage(props: {
 
           {/* Order Items */}
           <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Order Items</h2>
+            <h2 className="text-xl font-semibold text-neutral-900 mb-4">Order Items</h2>
             <div className="space-y-4">
               {order.items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex gap-4 p-4 bg-gray-50 rounded"
+                  className="flex gap-4 p-4 bg-neutral-50 rounded-lg"
                 >
                   <div className="flex-1">
-                    <h3 className="font-semibold">{item.product.name}</h3>
-                    <p className="text-gray-600 text-sm">
-                      {item.quantity} × ₹{item.price.toFixed(2)}
+                    <h3 className="font-semibold text-neutral-900">{item.product.name}</h3>
+                    <p className="text-neutral-600 text-sm">
+                      {item.quantity} × ₹{item.price.toLocaleString('en-IN')}
                     </p>
                   </div>
-                  <p className="font-semibold">
-                    ₹{(item.quantity * item.price).toFixed(2)}
+                  <p className="font-semibold text-neutral-900">
+                    ₹{(item.quantity * item.price).toLocaleString('en-IN')}
                   </p>
                 </div>
               ))}
@@ -138,39 +124,39 @@ export default function OrderDetailPage(props: {
           </div>
 
           {/* Order Summary */}
-          <div className="bg-gray-50 rounded p-4 mb-8">
+          <div className="bg-neutral-50 rounded-lg p-4 mb-8">
             <div className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between text-neutral-700">
                 <span>Subtotal</span>
-                <span>₹{order.subtotal.toFixed(2)}</span>
+                <span>₹{order.subtotal.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-neutral-700">
                 <span>Tax (18% GST)</span>
-                <span>₹{order.tax.toFixed(2)}</span>
+                <span>₹{order.tax.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between text-neutral-700">
                 <span>Shipping</span>
-                <span>₹{order.shipping.toFixed(2)}</span>
+                <span>₹{order.shipping.toLocaleString('en-IN')}</span>
               </div>
-              <div className="border-t pt-2 flex justify-between font-semibold">
+              <div className="border-t border-neutral-200 pt-2 flex justify-between font-semibold text-neutral-900">
                 <span>Total</span>
-                <span>₹{order.total.toFixed(2)}</span>
+                <span>₹{order.total.toLocaleString('en-IN')}</span>
               </div>
             </div>
           </div>
 
           {/* Order Status */}
-          <div className="bg-blue-50 border border-blue-200 rounded p-4">
-            <h3 className="font-semibold mb-2">Order Status</h3>
-            <p className="text-sm text-gray-700">
+          <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+            <h3 className="font-semibold text-neutral-900 mb-2">Order Status</h3>
+            <p className="text-sm text-neutral-700">
               Payment Status: <span className="font-semibold">{order.paymentStatus}</span>
             </p>
-            <p className="text-sm text-gray-700 mt-1">
+            <p className="text-sm text-neutral-700 mt-1">
               Order Status: <span className="font-semibold">{order.status}</span>
             </p>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

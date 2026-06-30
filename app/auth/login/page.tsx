@@ -29,26 +29,21 @@ export default function LoginPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      // Mock authentication - simulate delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const result = await response.json();
+      // Mock user data
+      const mockToken = btoa(JSON.stringify({
+        id: '1',
+        email: data.email,
+        name: data.email.split('@')[0],
+        role: 'CUSTOMER',
+      }));
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Login failed');
-      }
+      localStorage.setItem('auth-token', mockToken);
 
-      localStorage.setItem('auth-token', result.token);
-
-      const user = result.user;
-      if (user.role === 'ADMIN') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/');
-      }
+      // Redirect to home
+      router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {

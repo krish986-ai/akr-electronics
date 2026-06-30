@@ -1,135 +1,120 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Order } from '@/types';
+import { cn } from '@/lib/utils/cn';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth/client';
+
+const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
+
+// Mock orders data
+const mockOrders = [
+  {
+    id: '1',
+    orderNumber: 'ORD-2026-001',
+    createdAt: new Date('2026-06-25'),
+    total: 2450,
+    status: 'DELIVERED',
+    items: [
+      { id: '1', product: { name: 'Arduino Uno R3' }, quantity: 1, price: 450 },
+      { id: '2', product: { name: 'Raspberry Pi 4' }, quantity: 1, price: 4500 },
+    ],
+    subtotal: 2100,
+    tax: 378,
+    shipping: 0,
+    paymentStatus: 'PAID',
+  },
+  {
+    id: '2',
+    orderNumber: 'ORD-2026-002',
+    createdAt: new Date('2026-06-20'),
+    total: 1980,
+    status: 'SHIPPED',
+    items: [
+      { id: '1', product: { name: 'DHT22 Sensor' }, quantity: 2, price: 350 },
+      { id: '2', product: { name: 'ESP8266 WiFi Module' }, quantity: 1, price: 950 },
+    ],
+    subtotal: 1650,
+    tax: 297,
+    shipping: 50,
+    paymentStatus: 'PAID',
+  },
+];
 
 export default function OrdersPage() {
   const { isAuthenticated } = useAuth();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    const fetchOrders = async () => {
-      try {
-        setIsLoading(true);
-        const token = localStorage.getItem('auth-token');
-
-        const response = await fetch('/api/orders', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          setOrders(result.data);
-        } else {
-          setError('Failed to load orders');
-        }
-      } catch (err) {
-        setError('An error occurred');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Please login to view orders</h1>
-          <Link
-            href="/auth/login"
-            className="inline-block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-          >
-            Login
-          </Link>
-        </div>
+      <div className={cn(container, 'py-12 text-center')}>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-4">Please login to view orders</h1>
+        <Link href="/auth/login">
+          <Button>Login</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-8">My Orders</h1>
+    <div className={cn(container, 'py-12')}>
+      <h1 className="text-4xl font-bold text-neutral-900 mb-8">My Orders</h1>
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded mb-6">
-            {error}
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="text-center py-12">Loading orders...</div>
-        ) : orders.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-600 mb-4">You haven&apos;t placed any orders yet</p>
-            <Link
-              href="/shop"
-              className="inline-block bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700"
-            >
-              Start Shopping
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow p-6">
+      {mockOrders.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-neutral-600 mb-4">You haven&apos;t placed any orders yet</p>
+          <Link href="/products">
+            <Button>Start Shopping</Button>
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {mockOrders.map((order) => (
+            <Card key={order.id} variant="default">
+              <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-lg font-semibold">{order.orderNumber}</h3>
-                    <p className="text-sm text-gray-600">
-                      {new Date(order.createdAt).toLocaleDateString()}
+                    <h3 className="text-lg font-semibold text-neutral-900">{order.orderNumber}</h3>
+                    <p className="text-sm text-neutral-600">
+                      {order.createdAt.toLocaleDateString()}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-blue-600">
-                      ₹{order.total.toFixed(2)}
+                    <p className="text-2xl font-bold text-primary-600">
+                      ₹{order.total.toLocaleString('en-IN')}
                     </p>
-                    <span className={`text-sm font-semibold ${
-                      order.status === 'DELIVERED'
-                        ? 'text-green-600'
-                        : 'text-orange-600'
-                    }`}>
+                    <span className={cn(
+                      'text-sm font-semibold',
+                      order.status === 'DELIVERED' ? 'text-green-600' : 'text-orange-600'
+                    )}>
                       {order.status}
                     </span>
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <p className="text-sm text-gray-600">
-                    {order.items.length} item(s)
+                <div className="border-t border-neutral-200 pt-4">
+                  <p className="text-sm text-neutral-600 mb-2">
+                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                   </p>
-                  <div className="mt-2 space-y-1">
+                  <div className="space-y-1">
                     {order.items.map((item) => (
-                      <p key={item.id} className="text-sm">
+                      <p key={item.id} className="text-sm text-neutral-600">
                         {item.product.name} × {item.quantity}
                       </p>
                     ))}
                   </div>
                 </div>
 
-                <Link
-                  href={`/orders/${order.id}`}
-                  className="text-blue-600 hover:underline text-sm mt-4 inline-block"
-                >
-                  View Details →
+                <Link href={`/orders/${order.id}`}>
+                  <Button variant="outline" size="sm" className="mt-4">
+                    View Details →
+                  </Button>
                 </Link>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

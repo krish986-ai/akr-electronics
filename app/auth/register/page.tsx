@@ -29,23 +29,18 @@ export default function RegisterPage() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: data.email,
-          name: data.name,
-          password: data.password,
-        }),
-      });
+      // Mock registration - simulate delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const result = await response.json();
+      // Mock user data
+      const mockToken = btoa(JSON.stringify({
+        id: Math.random().toString(36).substr(2, 9),
+        email: data.email,
+        name: data.name,
+        role: 'CUSTOMER',
+      }));
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Registration failed');
-      }
-
-      localStorage.setItem('auth-token', result.token);
+      localStorage.setItem('auth-token', mockToken);
       router.push('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
