@@ -31,7 +31,13 @@ export function Radio({ label, className, ...props }: RadioProps) {
   );
 }
 
-export function RadioGroup({ options, value, onChange, className, ...props }: { options: { label: string; value: string }[]; value?: string; onChange?: (value: string) => void } & React.HTMLAttributes<HTMLDivElement>) {
+interface RadioGroupProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
+  options: { label: string; value: string }[];
+  value?: string;
+  onChange?: (value: string) => void;
+}
+
+export function RadioGroup({ options, value, onChange, className, ...props }: RadioGroupProps) {
   return (
     <div className={cn('flex flex-col gap-3', className)} {...props}>
       {options.map((option) => (

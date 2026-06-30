@@ -75,12 +75,16 @@ export default function CartPage() {
                   <span className='font-semibold text-neutral-900'>Total</span>
                   <span className='text-2xl font-bold text-primary-600'>₹{total.toLocaleString('en-IN')}</span>
                 </div>
-                <Button fullWidth size='lg' disabled>
-                  Checkout (Coming Soon)
-                </Button>
-                <Button fullWidth variant='outline' className='mt-3'>
-                  Continue Shopping
-                </Button>
+                <a href="/checkout" className="block">
+                  <Button fullWidth size='lg'>
+                    Proceed to Checkout
+                  </Button>
+                </a>
+                <a href="/products" className="block mt-3">
+                  <Button fullWidth variant='outline'>
+                    Continue Shopping
+                  </Button>
+                </a>
               </CardContent>
             </Card>
           </div>

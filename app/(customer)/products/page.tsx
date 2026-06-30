@@ -203,7 +203,9 @@ export default function ProductsPage() {
                         <Rating value={product.rating} readonly showCount count={product.reviews} />
                       </div>
                       <div className="flex gap-2">
-                        <Button size="sm" fullWidth>View</Button>
+                        <a href={`/products/${product.id}`} className="flex-1">
+                          <Button size="sm" fullWidth>View</Button>
+                        </a>
                         <Button size="sm" variant="ghost">♡</Button>
                       </div>
                     </CardContent>
