@@ -1,5 +1,5 @@
 import { collection, doc, setDoc, getDoc, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 import { Decimal } from 'decimal.js';
 
 export interface IotKit {
@@ -19,7 +19,7 @@ export interface IotKit {
 
 export class KitService {
   static async createKit(data: any): Promise<IotKit> {
-    const docRef = doc(collection(db, 'iotKits'));
+    const docRef = doc(collection(getDb(), 'iotKits'));
     const kit = {
       ...data,
       id: docRef.id,
@@ -33,12 +33,12 @@ export class KitService {
   }
 
   static async getKitById(id: string): Promise<IotKit | null> {
-    const snapshot = await getDoc(doc(db, 'iotKits', id));
+    const snapshot = await getDoc(doc(getDb(), 'iotKits', id));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
   static async listKits(): Promise<IotKit[]> {
-    const q = query(collection(db, 'iotKits'), where('visibility', '==', 'PUBLIC'));
+    const q = query(collection(getDb(), 'iotKits'), where('visibility', '==', 'PUBLIC'));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => this.fromFirestore(d));
   }

@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 import { Decimal } from 'decimal.js';
 
 export interface KitComponent {
@@ -36,7 +36,7 @@ export interface IotKit {
 
 export class KitRepository {
   static async create(data: Omit<IotKit, 'id' | 'createdAt' | 'updatedAt' | 'componentCount'>): Promise<IotKit> {
-    const docRef = doc(collection(db, 'iotKits'));
+    const docRef = doc(collection(getDb(), 'iotKits'));
     const now = new Date();
     const kit = { ...data, id: docRef.id, createdAt: now, updatedAt: now, componentCount: 0 };
     await setDoc(docRef, this.toFirestore(kit));
@@ -44,23 +44,23 @@ export class KitRepository {
   }
 
   static async getById(id: string): Promise<IotKit | null> {
-    const snapshot = await getDoc(doc(db, 'iotKits', id));
+    const snapshot = await getDoc(doc(getDb(), 'iotKits', id));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
   static async getBySlug(slug: string): Promise<IotKit | null> {
-    const q = query(collection(db, 'iotKits'), where('slug', '==', slug), where('isDeleted', '==', false));
+    const q = query(collection(getDb(), 'iotKits'), where('slug', '==', slug), where('isDeleted', '==', false));
     const snapshot = await getDocs(q);
     return snapshot.docs.length > 0 ? this.fromFirestore(snapshot.docs[0]) : null;
   }
 
   static async update(id: string, data: Partial<IotKit>): Promise<void> {
-    await updateDoc(doc(db, 'iotKits', id), this.toFirestore({ ...data, updatedAt: new Date() }));
+    await updateDoc(doc(getDb(), 'iotKits', id), this.toFirestore({ ...data, updatedAt: new Date() }));
   }
 
   static async listAll(limit_: number = 20): Promise<IotKit[]> {
     const q = query(
-      collection(db, 'iotKits'),
+      collection(getDb(), 'iotKits'),
       where('visibility', '==', 'PUBLIC'),
       where('isDeleted', '==', false),
       orderBy('createdAt', 'desc'),
@@ -72,7 +72,7 @@ export class KitRepository {
 
   static async listFeatured(limit_: number = 6): Promise<IotKit[]> {
     const q = query(
-      collection(db, 'iotKits'),
+      collection(getDb(), 'iotKits'),
       where('isFeatured', '==', true),
       where('visibility', '==', 'PUBLIC'),
       where('isDeleted', '==', false),
@@ -84,7 +84,7 @@ export class KitRepository {
   }
 
   static async addComponent(kitId: string, productId: string, quantity: number): Promise<void> {
-    const componentRef = doc(collection(db, `iotKits/${kitId}/components`));
+    const componentRef = doc(collection(getDb(), `iotKits/${kitId}/components`));
     const now = new Date();
     await setDoc(componentRef, {
       productId,
@@ -99,19 +99,19 @@ export class KitRepository {
   }
 
   static async removeComponent(kitId: string, componentId: string): Promise<void> {
-    const batch = writeBatch(db);
-    batch.delete(doc(db, `iotKits/${kitId}/components/${componentId}`));
+    const batch = writeBatch(getDb());
+    batch.delete(doc(getDb(), `iotKits/${kitId}/components/${componentId}`));
 
     const kit = await this.getById(kitId);
     if (kit && kit.componentCount > 0) {
-      batch.update(doc(db, 'iotKits', kitId), { componentCount: kit.componentCount - 1 });
+      batch.update(doc(getDb(), 'iotKits', kitId), { componentCount: kit.componentCount - 1 });
     }
 
     await batch.commit();
   }
 
   static async getComponents(kitId: string): Promise<KitComponent[]> {
-    const snapshot = await getDocs(collection(db, `iotKits/${kitId}/components`));
+    const snapshot = await getDocs(collection(getDb(), `iotKits/${kitId}/components`));
     return snapshot.docs.map(d => ({
       id: d.id,
       productId: d.data().productId,

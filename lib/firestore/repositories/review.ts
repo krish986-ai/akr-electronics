@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 
 export interface Review {
   id: string;
@@ -18,7 +18,7 @@ export interface Review {
 
 export class ReviewRepository {
   static async create(data: Omit<Review, 'id' | 'createdAt' | 'updatedAt' | 'helpful' | 'unhelpful'>): Promise<Review> {
-    const docRef = doc(collection(db, `products/${data.productId}/reviews`));
+    const docRef = doc(collection(getDb(), `products/${data.productId}/reviews`));
     const now = new Date();
     const review = { ...data, id: docRef.id, createdAt: now, updatedAt: now, helpful: 0, unhelpful: 0 };
     await setDoc(docRef, this.toFirestore(review));
@@ -26,21 +26,21 @@ export class ReviewRepository {
   }
 
   static async getById(productId: string, reviewId: string): Promise<Review | null> {
-    const snapshot = await getDoc(doc(db, `products/${productId}/reviews/${reviewId}`));
+    const snapshot = await getDoc(doc(getDb(), `products/${productId}/reviews/${reviewId}`));
     return snapshot.exists() ? this.fromFirestore(snapshot, productId) : null;
   }
 
   static async update(productId: string, reviewId: string, data: Partial<Review>): Promise<void> {
-    await updateDoc(doc(db, `products/${productId}/reviews/${reviewId}`), this.toFirestore({ ...data, updatedAt: new Date() }));
+    await updateDoc(doc(getDb(), `products/${productId}/reviews/${reviewId}`), this.toFirestore({ ...data, updatedAt: new Date() }));
   }
 
   static async delete(productId: string, reviewId: string): Promise<void> {
-    await deleteDoc(doc(db, `products/${productId}/reviews/${reviewId}`));
+    await deleteDoc(doc(getDb(), `products/${productId}/reviews/${reviewId}`));
   }
 
   static async listByProduct(productId: string, limit_: number = 10): Promise<Review[]> {
     const q = query(
-      collection(db, `products/${productId}/reviews`),
+      collection(getDb(), `products/${productId}/reviews`),
       where('status', '==', 'APPROVED'),
       orderBy('createdAt', 'desc'),
       limit(limit_)
@@ -51,7 +51,7 @@ export class ReviewRepository {
 
   static async listPending(productId: string, limit_: number = 20): Promise<Review[]> {
     const q = query(
-      collection(db, `products/${productId}/reviews`),
+      collection(getDb(), `products/${productId}/reviews`),
       where('status', '==', 'PENDING'),
       orderBy('createdAt', 'asc'),
       limit(limit_)
@@ -61,13 +61,13 @@ export class ReviewRepository {
   }
 
   static async listByUser(userId: string, limit_: number = 20): Promise<Review[]> {
-    const q = query(collection(db, 'products'), limit(1));
+    const q = query(collection(getDb(), 'products'), limit(1));
     const productsSnapshot = await getDocs(q);
 
     const allReviews: Review[] = [];
     for (const productDoc of productsSnapshot.docs) {
       const reviewsQ = query(
-        collection(db, `products/${productDoc.id}/reviews`),
+        collection(getDb(), `products/${productDoc.id}/reviews`),
         where('userId', '==', userId),
         orderBy('createdAt', 'desc')
       );

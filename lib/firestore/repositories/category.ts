@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 
 export interface Category {
   id: string;
@@ -23,7 +23,7 @@ export interface Category {
 
 export class CategoryRepository {
   static async create(data: Omit<Category, 'id' | 'createdAt' | 'updatedAt'>): Promise<Category> {
-    const docRef = doc(collection(db, 'categories'));
+    const docRef = doc(collection(getDb(), 'categories'));
     const now = new Date();
     const category = { ...data, id: docRef.id, createdAt: now, updatedAt: now };
     await setDoc(docRef, this.toFirestore(category));
@@ -31,23 +31,23 @@ export class CategoryRepository {
   }
 
   static async getById(id: string): Promise<Category | null> {
-    const snapshot = await getDoc(doc(db, 'categories', id));
+    const snapshot = await getDoc(doc(getDb(), 'categories', id));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
   static async getBySlug(slug: string): Promise<Category | null> {
-    const q = query(collection(db, 'categories'), where('slug', '==', slug), where('isDeleted', '==', false));
+    const q = query(collection(getDb(), 'categories'), where('slug', '==', slug), where('isDeleted', '==', false));
     const snapshot = await getDocs(q);
     return snapshot.docs.length > 0 ? this.fromFirestore(snapshot.docs[0]) : null;
   }
 
   static async update(id: string, data: Partial<Category>): Promise<void> {
-    await updateDoc(doc(db, 'categories', id), this.toFirestore({ ...data, updatedAt: new Date() }));
+    await updateDoc(doc(getDb(), 'categories', id), this.toFirestore({ ...data, updatedAt: new Date() }));
   }
 
   static async listAll(limit_: number = 50): Promise<Category[]> {
     const q = query(
-      collection(db, 'categories'),
+      collection(getDb(), 'categories'),
       where('isDeleted', '==', false),
       where('status', '==', 'ACTIVE'),
       orderBy('displayOrder', 'asc'),
@@ -59,7 +59,7 @@ export class CategoryRepository {
 
   static async listFeatured(limit_: number = 10): Promise<Category[]> {
     const q = query(
-      collection(db, 'categories'),
+      collection(getDb(), 'categories'),
       where('isFeatured', '==', true),
       where('isDeleted', '==', false),
       where('status', '==', 'ACTIVE'),
@@ -72,7 +72,7 @@ export class CategoryRepository {
 
   static async getChildren(parentId: string): Promise<Category[]> {
     const q = query(
-      collection(db, 'categories'),
+      collection(getDb(), 'categories'),
       where('parentId', '==', parentId),
       where('isDeleted', '==', false),
       orderBy('displayOrder', 'asc')

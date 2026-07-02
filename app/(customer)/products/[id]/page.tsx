@@ -12,6 +12,7 @@ import {
   FREE_DELIVERY_THRESHOLD,
 } from '@/lib/mock/products';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
+import { useCartStore } from '@/lib/stores/cart';
 
 const TABS = ['Description', 'Specification', 'Warranty', 'Reviews', 'QnA', 'Country of Origin'] as const;
 type Tab = (typeof TABS)[number];
@@ -26,6 +27,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [pincode, setPincode] = useState('');
   const [deliveryMsg, setDeliveryMsg] = useState<{ ok: boolean; message: string } | null>(null);
   const [added, setAdded] = useState(false);
+  const addItem = useCartStore(state => state.addItem);
 
   const reviews = useMemo(
     () => productReviews.filter(r => r.productId === product?.id && r.status === 'APPROVED'),
@@ -172,6 +174,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <button
               disabled={product.stock === 0}
               onClick={() => {
+                addItem(product, quantity);
                 setAdded(true);
                 setTimeout(() => setAdded(false), 2000);
               }}
@@ -181,7 +184,10 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             </button>
             <button
               disabled={product.stock === 0}
-              onClick={() => router.push('/checkout')}
+              onClick={() => {
+                addItem(product, quantity);
+                router.push('/checkout');
+              }}
               className="flex-1 h-10 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"
             >
               ⚡ Buy Now

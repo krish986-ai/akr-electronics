@@ -129,3 +129,10 @@ Indian electronics store. Runs on the mock data layer; backend wiring is Phase 1
 
 **Progress log**
 - 2026-07-02: Roadmap created. Phase 15 + 16 started (storefront + admin rebuild on mock data).
+- 2026-07-02: Phase 15 + 16 complete (commit a853281).
+- 2026-07-02: Phase 17 foundation: guarded Firebase config with mock fallback,
+  real Firebase Auth in auth client (login/register/Google), persistent cart
+  store wired to product + cart pages + header badge, catalog data-source
+  layer (lib/data/catalog.ts), seed endpoint (POST /api/admin/seed), and
+  firestore.rules. Remaining: convert listing/home pages to async data source,
+  orders lifecycle, admin CRUD writes, deploy rules + seed real project.

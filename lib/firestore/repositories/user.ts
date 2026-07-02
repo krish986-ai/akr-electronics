@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 
 export type UserRole = 'ADMIN' | 'CUSTOMER';
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED' | 'DELETED';
@@ -36,28 +36,28 @@ export class UserRepository {
       createdAt: now,
       updatedAt: now,
     };
-    await setDoc(doc(db, 'users', id), this.toFirestore(user));
+    await setDoc(doc(getDb(), 'users', id), this.toFirestore(user));
     return user;
   }
 
   static async getById(id: string): Promise<User | null> {
-    const snapshot = await getDoc(doc(db, 'users', id));
+    const snapshot = await getDoc(doc(getDb(), 'users', id));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
   static async getByEmail(email: string): Promise<User | null> {
-    const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+    const q = query(collection(getDb(), 'users'), where('email', '==', email.toLowerCase()));
     const snapshot = await getDocs(q);
     return snapshot.docs.length > 0 ? this.fromFirestore(snapshot.docs[0]) : null;
   }
 
   static async update(id: string, data: Partial<User>): Promise<void> {
-    await updateDoc(doc(db, 'users', id), this.toFirestore({ ...data, updatedAt: new Date() }));
+    await updateDoc(doc(getDb(), 'users', id), this.toFirestore({ ...data, updatedAt: new Date() }));
   }
 
   static async listAdmins(limit_: number = 50): Promise<User[]> {
     const q = query(
-      collection(db, 'users'),
+      collection(getDb(), 'users'),
       where('role', '==', 'ADMIN'),
       where('isDeleted', '==', false),
       orderBy('createdAt', 'desc'),
@@ -69,7 +69,7 @@ export class UserRepository {
 
   static async listCustomers(limit_: number = 50): Promise<User[]> {
     const q = query(
-      collection(db, 'users'),
+      collection(getDb(), 'users'),
       where('role', '==', 'CUSTOMER'),
       where('isDeleted', '==', false),
       orderBy('createdAt', 'desc'),
@@ -96,7 +96,7 @@ export class UserRepository {
       updates.lastFailedLoginAt = new Date();
     }
 
-    await updateDoc(doc(db, 'users', id), this.toFirestore(updates));
+    await updateDoc(doc(getDb(), 'users', id), this.toFirestore(updates));
   }
 
   static toFirestore(user: Partial<User>): any {

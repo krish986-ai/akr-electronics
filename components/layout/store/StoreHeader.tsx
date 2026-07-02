@@ -1,15 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/client';
+import { useCartStore, cartCount } from '@/lib/stores/cart';
 
 const SEARCH_SUGGESTIONS = ['Arduino Uno R3', 'ESP32', 'Raspberry Pi 4', 'how to build a robot'];
 
 export function StoreHeader() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
+  const items = useCartStore(state => state.items);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const count = mounted ? cartCount(items) : 0;
   const [query, setQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -90,7 +95,18 @@ export function StoreHeader() {
             <HeaderIcon href="/compare" label="Compare" icon="⇄" />
             <HeaderIcon href="/track-order" label="Track" icon="📦" />
             <HeaderIcon href="/wishlist" label="Wishlist" icon="♡" />
-            <HeaderIcon href="/cart" label="Cart" icon="🛒" />
+            <Link
+              href="/cart"
+              className="relative flex flex-col items-center px-2 py-1 rounded-md text-neutral-600 hover:text-primary-600 hover:bg-neutral-50"
+            >
+              <span className="text-lg leading-none">🛒</span>
+              <span className="hidden sm:block text-[10px] mt-0.5">Cart</span>
+              {count > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-primary-600 text-white text-[10px] font-bold">
+                  {count > 99 ? '99+' : count}
+                </span>
+              )}
+            </Link>
 
             {isAuthenticated ? (
               <div className="relative">

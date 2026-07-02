@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginInput } from '@/lib/auth/validation';
+import { useAuth } from '@/lib/auth/client';
+import { friendlyAuthError } from '@/lib/auth/errors';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +15,7 @@ import { Alert } from '@/components/ui/Alert';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,24 +31,10 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       setError(null);
-
-      // Mock authentication - simulate delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Mock user data
-      const mockToken = btoa(JSON.stringify({
-        id: '1',
-        email: data.email,
-        name: data.email.split('@')[0],
-        role: 'CUSTOMER',
-      }));
-
-      localStorage.setItem('auth-token', mockToken);
-
-      // Redirect to home
+      await login(data.email, data.password);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(friendlyAuthError(err));
     } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 import { Decimal } from 'decimal.js';
 
 export type DiscountType = 'PERCENTAGE' | 'FIXED_AMOUNT';
@@ -24,7 +24,7 @@ export interface Coupon {
 
 export class CouponRepository {
   static async create(data: Omit<Coupon, 'id' | 'createdAt' | 'updatedAt' | 'usedCount'>): Promise<Coupon> {
-    const docRef = doc(collection(db, 'coupons'));
+    const docRef = doc(collection(getDb(), 'coupons'));
     const now = new Date();
     const coupon = { ...data, id: docRef.id, createdAt: now, updatedAt: now, usedCount: 0 };
     await setDoc(docRef, this.toFirestore(coupon));
@@ -32,12 +32,12 @@ export class CouponRepository {
   }
 
   static async getById(id: string): Promise<Coupon | null> {
-    const snapshot = await getDoc(doc(db, 'coupons', id));
+    const snapshot = await getDoc(doc(getDb(), 'coupons', id));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
   static async getByCode(code: string): Promise<Coupon | null> {
-    const q = query(collection(db, 'coupons'), where('code', '==', code.toUpperCase()), where('isDeleted', '==', false));
+    const q = query(collection(getDb(), 'coupons'), where('code', '==', code.toUpperCase()), where('isDeleted', '==', false));
     const snapshot = await getDocs(q);
     return snapshot.docs.length > 0 ? this.fromFirestore(snapshot.docs[0]) : null;
   }
@@ -80,7 +80,7 @@ export class CouponRepository {
   }
 
   static async update(id: string, data: Partial<Coupon>): Promise<void> {
-    await updateDoc(doc(db, 'coupons', id), this.toFirestore({ ...data, updatedAt: new Date() }));
+    await updateDoc(doc(getDb(), 'coupons', id), this.toFirestore({ ...data, updatedAt: new Date() }));
   }
 
   static async incrementUsageCount(id: string): Promise<void> {
@@ -92,7 +92,7 @@ export class CouponRepository {
 
   static async listActive(limit_: number = 50): Promise<Coupon[]> {
     const q = query(
-      collection(db, 'coupons'),
+      collection(getDb(), 'coupons'),
       where('status', '==', 'ACTIVE'),
       where('isDeleted', '==', false),
       where('expiryDate', '>=', new Date()),

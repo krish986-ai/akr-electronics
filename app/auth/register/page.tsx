@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, type RegisterInput } from '@/lib/auth/validation';
+import { useAuth } from '@/lib/auth/client';
+import { friendlyAuthError } from '@/lib/auth/errors';
 import { AuthLayout } from '@/components/layout/AuthLayout';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +15,7 @@ import { Alert } from '@/components/ui/Alert';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { registerUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,22 +31,10 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       setError(null);
-
-      // Mock registration - simulate delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Mock user data
-      const mockToken = btoa(JSON.stringify({
-        id: Math.random().toString(36).substr(2, 9),
-        email: data.email,
-        name: data.name,
-        role: 'CUSTOMER',
-      }));
-
-      localStorage.setItem('auth-token', mockToken);
+      await registerUser(data.name, data.email, data.password);
       router.push('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(friendlyAuthError(err));
     } finally {
       setIsLoading(false);
     }

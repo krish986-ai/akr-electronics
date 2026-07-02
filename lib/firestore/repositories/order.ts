@@ -1,5 +1,5 @@
 import { collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc, writeBatch } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 import { Decimal } from 'decimal.js';
 
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
@@ -46,7 +46,7 @@ export interface Order {
 
 export class OrderRepository {
   static async create(data: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): Promise<Order> {
-    const docRef = doc(collection(db, 'orders'));
+    const docRef = doc(collection(getDb(), 'orders'));
     const now = new Date();
     const order: Order = {
       ...data,
@@ -63,19 +63,19 @@ export class OrderRepository {
   }
 
   static async getById(id: string): Promise<Order | null> {
-    const snapshot = await getDoc(doc(db, 'orders', id));
+    const snapshot = await getDoc(doc(getDb(), 'orders', id));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
   static async getByOrderNumber(orderNumber: string): Promise<Order | null> {
-    const q = query(collection(db, 'orders'), where('orderNumber', '==', orderNumber));
+    const q = query(collection(getDb(), 'orders'), where('orderNumber', '==', orderNumber));
     const snapshot = await getDocs(q);
     return snapshot.docs.length > 0 ? this.fromFirestore(snapshot.docs[0]) : null;
   }
 
   static async getUserOrders(userId: string, limit_: number = 50): Promise<Order[]> {
     const q = query(
-      collection(db, 'orders'),
+      collection(getDb(), 'orders'),
       where('userId', '==', userId),
       where('isDeleted', '==', false),
       orderBy('createdAt', 'desc'),
@@ -87,7 +87,7 @@ export class OrderRepository {
 
   static async listAll(limit_: number = 50): Promise<Order[]> {
     const q = query(
-      collection(db, 'orders'),
+      collection(getDb(), 'orders'),
       where('isDeleted', '==', false),
       orderBy('createdAt', 'desc'),
       limit(limit_)
@@ -98,7 +98,7 @@ export class OrderRepository {
 
   static async listByStatus(status: OrderStatus, limit_: number = 50): Promise<Order[]> {
     const q = query(
-      collection(db, 'orders'),
+      collection(getDb(), 'orders'),
       where('orderStatus', '==', status),
       where('isDeleted', '==', false),
       orderBy('createdAt', 'desc'),
@@ -109,9 +109,9 @@ export class OrderRepository {
   }
 
   static async updateStatus(id: string, orderStatus: OrderStatus, message?: string): Promise<void> {
-    const batch = writeBatch(db);
+    const batch = writeBatch(getDb());
 
-    batch.update(doc(db, 'orders', id), {
+    batch.update(doc(getDb(), 'orders', id), {
       orderStatus,
       updatedAt: new Date(),
     });
@@ -121,7 +121,7 @@ export class OrderRepository {
   }
 
   static async updatePaymentStatus(id: string, status: PaymentStatus): Promise<void> {
-    await updateDoc(doc(db, 'orders', id), {
+    await updateDoc(doc(getDb(), 'orders', id), {
       paymentStatus: status,
       updatedAt: new Date(),
     });
@@ -133,13 +133,13 @@ export class OrderRepository {
       updatedAt: new Date(),
     };
     if (trackingNumber) updates.trackingNumber = trackingNumber;
-    await updateDoc(doc(db, 'orders', id), updates);
+    await updateDoc(doc(getDb(), 'orders', id), updates);
 
     await this.addTimeline(id, 'SHIPPED', `Shipping status: ${status}${trackingNumber ? ` - Tracking: ${trackingNumber}` : ''}`);
   }
 
   static async getTimeline(orderId: string): Promise<OrderTimeline[]> {
-    const snapshot = await getDocs(collection(db, `orders/${orderId}/timeline`));
+    const snapshot = await getDocs(collection(getDb(), `orders/${orderId}/timeline`));
     return snapshot.docs
       .map(d => ({
         timestamp: d.data().timestamp?.toDate?.() || d.data().timestamp,
@@ -150,7 +150,7 @@ export class OrderRepository {
   }
 
   private static async addTimeline(orderId: string, status: OrderStatus, message: string): Promise<void> {
-    const timelineRef = doc(collection(db, `orders/${orderId}/timeline`));
+    const timelineRef = doc(collection(getDb(), `orders/${orderId}/timeline`));
     await setDoc(timelineRef, {
       timestamp: new Date(),
       status,

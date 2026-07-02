@@ -1,82 +1,87 @@
 import { create } from 'zustand';
-import { CartItem, Product } from '@/types';
+import { persist } from 'zustand/middleware';
+import { Product, FREE_DELIVERY_THRESHOLD } from '@/lib/mock/products';
+
+export interface CartLine {
+  productId: string;
+  name: string;
+  slug: string;
+  image: string;
+  price: number;
+  stock: number;
+  quantity: number;
+}
 
 interface CartState {
-  items: CartItem[];
-  total: number;
+  items: CartLine[];
   addItem: (product: Product, quantity: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
-  calculateTotal: () => void;
-  loadCart: (items: CartItem[]) => void;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  items: [],
-  total: 0,
+export const useCartStore = create<CartState>()(
+  persist(
+    set => ({
+      items: [],
 
-  addItem: (product: Product, quantity: number) => {
-    const state = get();
-    const existingItem = state.items.find(
-      (item) => item.product.id === product.id
-    );
+      addItem: (product, quantity) =>
+        set(state => {
+          const existing = state.items.find(item => item.productId === product.id);
+          if (existing) {
+            return {
+              items: state.items.map(item =>
+                item.productId === product.id
+                  ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) }
+                  : item
+              ),
+            };
+          }
+          return {
+            items: [
+              ...state.items,
+              {
+                productId: product.id,
+                name: product.name,
+                slug: product.slug,
+                image: product.image,
+                price: product.price,
+                stock: product.stock,
+                quantity: Math.min(quantity, product.stock),
+              },
+            ],
+          };
+        }),
 
-    if (existingItem) {
-      set((state) => ({
-        items: state.items.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + quantity, product.stock) }
-            : item
-        ),
-      }));
-    } else {
-      set((state) => ({
-        items: [...state.items, { id: product.id, product, quantity }],
-      }));
-    }
+      removeItem: productId =>
+        set(state => ({ items: state.items.filter(item => item.productId !== productId) })),
 
-    get().calculateTotal();
-  },
+      updateQuantity: (productId, quantity) =>
+        set(state => ({
+          items:
+            quantity <= 0
+              ? state.items.filter(item => item.productId !== productId)
+              : state.items.map(item =>
+                  item.productId === productId
+                    ? { ...item, quantity: Math.min(quantity, item.stock) }
+                    : item
+                ),
+        })),
 
-  removeItem: (productId: string) => {
-    set((state) => ({
-      items: state.items.filter((item) => item.product.id !== productId),
-    }));
-    get().calculateTotal();
-  },
+      clearCart: () => set({ items: [] }),
+    }),
+    { name: 'akr-cart' }
+  )
+);
 
-  updateQuantity: (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      get().removeItem(productId);
-      return;
-    }
+export function cartSubtotal(items: CartLine[]): number {
+  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+}
 
-    set((state) => ({
-      items: state.items.map((item) =>
-        item.product.id === productId
-          ? { ...item, quantity: Math.min(quantity, item.product.stock) }
-          : item
-      ),
-    }));
-    get().calculateTotal();
-  },
+export function cartShipping(subtotal: number): number {
+  return subtotal === 0 || subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : 49;
+}
 
-  clearCart: () => {
-    set({ items: [], total: 0 });
-  },
-
-  calculateTotal: () => {
-    const state = get();
-    const total = state.items.reduce(
-      (sum, item) => sum + item.product.price * item.quantity,
-      0
-    );
-    set({ total });
-  },
-
-  loadCart: (items: CartItem[]) => {
-    set({ items });
-    get().calculateTotal();
-  },
-}));
+export function cartCount(items: CartLine[]): number {
+  return items.reduce((sum, item) => sum + item.quantity, 0);
+}

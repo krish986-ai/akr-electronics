@@ -1,5 +1,5 @@
 import { getDoc, doc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { getDb } from '@/lib/firestore/safe-db';
 import { Decimal } from 'decimal.js';
 
 export interface WebsiteConfig {
@@ -33,7 +33,7 @@ const CONFIG_ID = 'main';
 
 export class WebsiteConfigRepository {
   static async get(): Promise<WebsiteConfig | null> {
-    const snapshot = await getDoc(doc(db, 'website_config', CONFIG_ID));
+    const snapshot = await getDoc(doc(getDb(), 'website_config', CONFIG_ID));
     return snapshot.exists() ? this.fromFirestore(snapshot) : null;
   }
 
@@ -43,12 +43,12 @@ export class WebsiteConfigRepository {
       id: CONFIG_ID,
       updatedAt: new Date(),
     };
-    await setDoc(doc(db, 'website_config', CONFIG_ID), this.toFirestore(config));
+    await setDoc(doc(getDb(), 'website_config', CONFIG_ID), this.toFirestore(config));
     return config;
   }
 
   static async update(data: Partial<Omit<WebsiteConfig, 'id'>>): Promise<WebsiteConfig | null> {
-    await updateDoc(doc(db, 'website_config', CONFIG_ID), this.toFirestore({ ...data, updatedAt: new Date() }));
+    await updateDoc(doc(getDb(), 'website_config', CONFIG_ID), this.toFirestore({ ...data, updatedAt: new Date() }));
     return this.get();
   }
 
