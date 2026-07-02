@@ -1,11 +1,17 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { products, productReviews, productQuestions, coupons } from '@/lib/mock/products';
+import { useOrdersStore, STATUS_BADGE_CLASSES } from '@/lib/stores/orders';
 
 const LOW_STOCK_THRESHOLD = 100;
 
 export default function AdminDashboard() {
+  const orders = useOrdersStore(state => state.orders);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const lowStock = products.filter(p => p.stock < LOW_STOCK_THRESHOLD);
   const pendingReviews = productReviews.filter(r => r.status === 'PENDING');
   const unansweredQuestions = productQuestions.filter(q => !q.answer);
@@ -19,12 +25,12 @@ export default function AdminDashboard() {
     { label: 'Active Coupons', value: String(activeCoupons.length), sub: `${coupons.length} total`, icon: '🎟️', href: '/admin/coupons' },
   ];
 
-  const recentOrders = [
-    { id: 'AKR-2026-1042', customer: 'Demo Customer', amount: '₹848', status: 'SHIPPED' },
-    { id: 'AKR-2026-1041', customer: 'Ravi Kumar', amount: '₹2,199', status: 'PROCESSING' },
-    { id: 'AKR-2026-1040', customer: 'Sneha P', amount: '₹549', status: 'DELIVERED' },
-    { id: 'AKR-2026-1039', customer: 'Arjun M', amount: '₹8,499', status: 'CONFIRMED' },
-  ];
+  const recentOrders = (mounted ? orders : []).slice(0, 5).map(o => ({
+    id: o.orderNumber,
+    customer: o.address.name,
+    amount: `₹${o.total.toLocaleString('en-IN')}`,
+    status: o.status,
+  }));
 
   const topProducts = [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 5);
 
@@ -59,6 +65,9 @@ export default function AdminDashboard() {
             </Link>
           </div>
           <div className="space-y-2">
+            {recentOrders.length === 0 && (
+              <p className="text-sm text-neutral-500">No orders yet — they appear here once customers check out.</p>
+            )}
             {recentOrders.map(o => (
               <div key={o.id} className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-0">
                 <div>
@@ -68,15 +77,9 @@ export default function AdminDashboard() {
                 <div className="text-right">
                   <p className="text-sm font-semibold">{o.amount}</p>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      o.status === 'DELIVERED'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : o.status === 'SHIPPED'
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-amber-100 text-amber-600'
-                    }`}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${STATUS_BADGE_CLASSES[o.status] ?? 'bg-amber-100 text-amber-600'}`}
                   >
-                    {o.status}
+                    {o.status.replace(/_/g, ' ')}
                   </span>
                 </div>
               </div>

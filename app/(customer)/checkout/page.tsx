@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { RadioGroup } from '@/components/ui/Radio';
 import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
+import { useOrdersStore, nextOrderNumber } from '@/lib/stores/orders';
 import { coupons, Coupon } from '@/lib/mock/products';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -72,9 +73,29 @@ export default function CheckoutPage() {
     shippingAddress.city.trim() !== '' &&
     /^[1-9][0-9]{5}$/.test(shippingAddress.pincode);
 
+  const saveOrder = useOrdersStore(state => state.placeOrder);
+
   const placeOrder = () => {
-    const orderId = `AKR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    setPlacedOrderId(orderId);
+    const orderNumber = nextOrderNumber();
+    saveOrder({
+      orderNumber,
+      placedAt: new Date().toISOString(),
+      status: 'CONFIRMED',
+      paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase(),
+      items: items.map(item => ({
+        productId: item.productId,
+        name: item.name,
+        image: item.image,
+        price: item.price,
+        quantity: item.quantity,
+      })),
+      subtotal,
+      shipping: shippingCost,
+      discount,
+      total,
+      address: shippingAddress,
+    });
+    setPlacedOrderId(orderNumber);
     clearCart();
   };
 

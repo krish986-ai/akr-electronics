@@ -1,120 +1,106 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/utils/cn';
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent } from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth/client';
-
-const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
-
-// Mock orders data
-const mockOrders = [
-  {
-    id: '1',
-    orderNumber: 'ORD-2026-001',
-    createdAt: new Date('2026-06-25'),
-    total: 2450,
-    status: 'DELIVERED',
-    items: [
-      { id: '1', product: { name: 'Arduino Uno R3' }, quantity: 1, price: 450 },
-      { id: '2', product: { name: 'Raspberry Pi 4' }, quantity: 1, price: 4500 },
-    ],
-    subtotal: 2100,
-    tax: 378,
-    shipping: 0,
-    paymentStatus: 'PAID',
-  },
-  {
-    id: '2',
-    orderNumber: 'ORD-2026-002',
-    createdAt: new Date('2026-06-20'),
-    total: 1980,
-    status: 'SHIPPED',
-    items: [
-      { id: '1', product: { name: 'DHT22 Sensor' }, quantity: 2, price: 350 },
-      { id: '2', product: { name: 'ESP8266 WiFi Module' }, quantity: 1, price: 950 },
-    ],
-    subtotal: 1650,
-    tax: 297,
-    shipping: 50,
-    paymentStatus: 'PAID',
-  },
-];
+import { useOrdersStore, STATUS_BADGE_CLASSES } from '@/lib/stores/orders';
 
 export default function OrdersPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  const orders = useOrdersStore(state => state.orders);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted || isLoading) return null;
 
   if (!isAuthenticated) {
     return (
-      <div className={cn(container, 'py-12 text-center')}>
-        <h1 className="text-2xl font-bold text-neutral-900 mb-4">Please login to view orders</h1>
-        <Link href="/auth/login">
-          <Button>Login</Button>
+      <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+        <h1 className="text-2xl font-bold text-neutral-900 mb-2">Sign in to view your orders</h1>
+        <p className="text-sm text-neutral-500 mb-6">
+          Or track any order without an account using your order number.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Link
+            href="/auth/login"
+            className="h-11 px-6 leading-[44px] rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
+          >
+            Login
+          </Link>
+          <Link
+            href="/track-order"
+            className="h-11 px-6 leading-[44px] rounded-lg border border-neutral-300 text-neutral-700 font-medium hover:bg-neutral-50"
+          >
+            Track an Order
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+        <p className="text-5xl mb-4">📦</p>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-2">No orders yet</h1>
+        <p className="text-sm text-neutral-500 mb-6">When you place an order, it will show up here.</p>
+        <Link
+          href="/products"
+          className="inline-block bg-primary-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-700"
+        >
+          Start Shopping
         </Link>
       </div>
     );
   }
 
   return (
-    <div className={cn(container, 'py-12')}>
-      <h1 className="text-4xl font-bold text-neutral-900 mb-8">My Orders</h1>
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-3xl font-bold text-neutral-900 mb-1">My Orders</h1>
+      <p className="text-sm text-neutral-500 mb-8">
+        {orders.length} order{orders.length === 1 ? '' : 's'}
+      </p>
 
-      {mockOrders.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-neutral-600 mb-4">You haven&apos;t placed any orders yet</p>
-          <Link href="/products">
-            <Button>Start Shopping</Button>
+      <div className="space-y-4">
+        {orders.map(order => (
+          <Link
+            key={order.orderNumber}
+            href={`/orders/${order.orderNumber}`}
+            className="block bg-white border border-neutral-200 rounded-xl p-5 hover:border-primary-300 hover:shadow-md transition-all"
+          >
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <p className="font-mono font-semibold text-neutral-900">{order.orderNumber}</p>
+                <p className="text-xs text-neutral-500">
+                  Placed {new Date(order.placedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {' · '}
+                  {order.paymentMethod}
+                </p>
+              </div>
+              <span
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${STATUS_BADGE_CLASSES[order.status] ?? 'bg-neutral-100 text-neutral-600'}`}
+              >
+                {order.status.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-4">
+              {order.items.slice(0, 4).map(item => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={item.productId}
+                  src={item.image}
+                  alt={item.name}
+                  className="w-12 h-12 rounded-lg object-cover border border-neutral-200"
+                />
+              ))}
+              {order.items.length > 4 && (
+                <span className="text-xs text-neutral-500">+{order.items.length - 4} more</span>
+              )}
+              <p className="ml-auto font-bold text-neutral-900">₹{order.total.toLocaleString('en-IN')}</p>
+            </div>
           </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {mockOrders.map((order) => (
-            <Card key={order.id} variant="default">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-neutral-900">{order.orderNumber}</h3>
-                    <p className="text-sm text-neutral-600">
-                      {order.createdAt.toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-primary-600">
-                      ₹{order.total.toLocaleString('en-IN')}
-                    </p>
-                    <span className={cn(
-                      'text-sm font-semibold',
-                      order.status === 'DELIVERED' ? 'text-green-600' : 'text-orange-600'
-                    )}>
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="border-t border-neutral-200 pt-4">
-                  <p className="text-sm text-neutral-600 mb-2">
-                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
-                  </p>
-                  <div className="space-y-1">
-                    {order.items.map((item) => (
-                      <p key={item.id} className="text-sm text-neutral-600">
-                        {item.product.name} × {item.quantity}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-
-                <Link href={`/orders/${order.id}`}>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    View Details →
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }

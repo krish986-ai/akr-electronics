@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { trackableOrders, TrackableOrder } from '@/lib/mock/products';
+import { useOrdersStore, orderTimeline } from '@/lib/stores/orders';
 
 export default function TrackOrderPage() {
+  const placedOrders = useOrdersStore(state => state.orders);
   const [orderNumber, setOrderNumber] = useState('');
   const [email, setEmail] = useState('');
   const [result, setResult] = useState<TrackableOrder | null>(null);
@@ -11,13 +13,36 @@ export default function TrackOrderPage() {
 
   const lookup = (e: React.FormEvent) => {
     e.preventDefault();
-    const order = trackableOrders.find(
+    const wantedNumber = orderNumber.trim().toLowerCase();
+    const wantedEmail = email.trim().toLowerCase();
+
+    const placed = placedOrders.find(
       o =>
-        o.orderNumber.toLowerCase() === orderNumber.trim().toLowerCase() &&
-        o.email.toLowerCase() === email.trim().toLowerCase()
+        o.orderNumber.toLowerCase() === wantedNumber &&
+        o.address.email.toLowerCase() === wantedEmail
     );
-    if (order) {
-      setResult(order);
+    if (placed) {
+      setResult({
+        orderNumber: placed.orderNumber,
+        email: placed.address.email,
+        status: placed.status === 'CANCELLED' ? 'CONFIRMED' : placed.status,
+        placedAt: new Date(placed.placedAt).toLocaleDateString('en-IN'),
+        items: placed.items.map(i => ({ name: i.name, quantity: i.quantity })),
+        timeline: orderTimeline(placed.status).map(step => ({
+          label: step.label,
+          date: '',
+          done: step.done,
+        })),
+      });
+      setError('');
+      return;
+    }
+
+    const demo = trackableOrders.find(
+      o => o.orderNumber.toLowerCase() === wantedNumber && o.email.toLowerCase() === wantedEmail
+    );
+    if (demo) {
+      setResult(demo);
       setError('');
     } else {
       setResult(null);
