@@ -1,16 +1,16 @@
 'use client';
 
-import { useMemo, useState, use } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  getProductBySlugOrId,
-  getRelatedProducts,
   productReviews,
   productQuestions,
   estimateDelivery,
   FREE_DELIVERY_THRESHOLD,
+  Product,
 } from '@/lib/mock/products';
+import { getProduct, getProducts } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { useCartStore } from '@/lib/stores/cart';
 import { useWishlistStore } from '@/lib/stores/wishlist';
@@ -21,8 +21,9 @@ type Tab = (typeof TABS)[number];
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const product = getProductBySlugOrId(id);
 
+  const [product, setProduct] = useState<Product | null | undefined>(undefined);
+  const [related, setRelated] = useState<Product[]>([]);
   const [tab, setTab] = useState<Tab>('Description');
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
@@ -33,13 +34,41 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const toggleWishlist = useWishlistStore(state => state.toggle);
   const inWishlist = product ? wishlistIds.includes(product.id) : false;
 
+  useEffect(() => {
+    let cancelled = false;
+    getProduct(id).then(async found => {
+      if (cancelled) return;
+      setProduct(found ?? null);
+      if (found) {
+        const all = await getProducts();
+        if (!cancelled) {
+          setRelated(
+            all.filter(p => p.categorySlug === found.categorySlug && p.id !== found.id).slice(0, 4)
+          );
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   const reviews = useMemo(
     () => productReviews.filter(r => r.productId === product?.id && r.status === 'APPROVED'),
     [product]
   );
   const questions = useMemo(() => productQuestions.filter(q => q.productId === product?.id), [product]);
 
-  if (!product) {
+  if (product === undefined) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-32 text-center">
+        <div className="inline-block w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm text-neutral-500 mt-3">Loading product...</p>
+      </div>
+    );
+  }
+
+  if (product === null) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-20 text-center">
         <h1 className="text-2xl font-bold text-neutral-900 mb-2">Product not found</h1>
@@ -53,7 +82,6 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const discount = product.originalPrice
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
     : 0;
-  const related = getRelatedProducts(product);
   const gallery = [product.image, ...(product.images ?? [])];
 
   return (

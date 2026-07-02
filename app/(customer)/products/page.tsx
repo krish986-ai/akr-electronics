@@ -4,7 +4,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
-import { products, brands, categoryTree } from '@/lib/mock/products';
+import { products as fallbackProducts, brands, categoryTree, Product } from '@/lib/mock/products';
+import { getProducts } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -24,12 +25,17 @@ function resolveCategorySlug(slug: string): string {
 function ProductsPageInner() {
   const searchParams = useSearchParams();
 
+  const [products, setProducts] = useState<Product[]>(fallbackProducts);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
   const [sortBy, setSortBy] = useState('popular');
   const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    getProducts().then(setProducts);
+  }, []);
 
   useEffect(() => {
     setSearchQuery(searchParams.get('search') ?? '');
@@ -71,7 +77,7 @@ function ProductsPageInner() {
     }
 
     return result;
-  }, [searchQuery, selectedCategory, selectedBrand, maxPrice, sortBy]);
+  }, [products, searchQuery, selectedCategory, selectedBrand, maxPrice, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);

@@ -2,9 +2,13 @@ import Link from 'next/link';
 import { StoreShell } from '@/components/layout/store/StoreShell';
 import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
-import { products, categoryTree, iotKits, FREE_DELIVERY_THRESHOLD } from '@/lib/mock/products';
+import { iotKits, FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
+import { getProducts, getCategories } from '@/lib/data/catalog';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
+
+// Refresh Firestore-backed content every 5 minutes
+export const revalidate = 300;
 
 export const metadata = {
   title: 'A.K.R Electronics - Premium IoT Components & Kits',
@@ -26,7 +30,8 @@ const SERVICES = [
   { icon: '📦', title: 'Order Tracking', text: 'Track without logging in', href: '/track-order' },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [products, categoryTree] = await Promise.all([getProducts(), getCategories()]);
   const featured = products.filter(p => p.isFeatured).slice(0, 4);
   const bestsellers = products.filter(p => p.isBestseller).slice(0, 4);
   const newArrivals = products.filter(p => p.isNew).slice(0, 4);
@@ -138,7 +143,7 @@ function ProductRail({
   tint,
 }: {
   title: string;
-  items: typeof products;
+  items: Product[];
   href: string;
   tint?: string;
 }) {
