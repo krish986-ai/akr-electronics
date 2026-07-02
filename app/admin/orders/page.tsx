@@ -22,11 +22,11 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Orders</h1>
+        <h1 className="text-3xl font-bold text-neutral-900">Orders</h1>
         <Button variant="primary">Export Orders</Button>
       </div>
 
-      <Card variant="default" className="bg-neutral-800 border-neutral-700">
+      <Card variant="default">
         <CardContent className="p-6">
           <div className="flex gap-4 mb-6">
             <SearchInput placeholder="Search orders..." className="flex-1" />
@@ -48,9 +48,9 @@ export default function OrdersPage() {
               <TableBody>
                 {orders.map(order => (
                   <TableRow key={order.id}>
-                    <TableCell className="font-medium text-white">{order.id}</TableCell>
+                    <TableCell className="font-medium text-neutral-900">{order.id}</TableCell>
                     <TableCell className="text-neutral-400">{order.customer}</TableCell>
-                    <TableCell className="text-white">₹{order.amount.toLocaleString()}</TableCell>
+                    <TableCell className="text-neutral-900">₹{order.amount.toLocaleString()}</TableCell>
                     <TableCell className="text-neutral-400">{order.date}</TableCell>
                     <TableCell>
                       <Badge variant={order.status === 'Delivered' ? 'success' : order.status === 'Processing' ? 'primary' : 'warning'} size="sm">

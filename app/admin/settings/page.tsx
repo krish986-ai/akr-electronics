@@ -17,15 +17,15 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-white">Settings</h1>
+      <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
 
       {saved && <div className="p-4 bg-success rounded text-white">Settings saved successfully!</div>}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* General Settings */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700">
+        <Card variant="default">
           <CardHeader>
-            <CardTitle className="text-white">General</CardTitle>
+            <CardTitle>General</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input label="Website Name" placeholder="A.K.R Electronics" />
@@ -37,9 +37,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* Contact Settings */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700">
+        <Card variant="default">
           <CardHeader>
-            <CardTitle className="text-white">Contact Info</CardTitle>
+            <CardTitle>Contact Info</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input label="Email" placeholder="support@akrelectronics.com" />
@@ -50,9 +50,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* Appearance Settings */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700">
+        <Card variant="default">
           <CardHeader>
-            <CardTitle className="text-white">Appearance</CardTitle>
+            <CardTitle>Appearance</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Select
@@ -69,9 +69,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* Email Settings */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700">
+        <Card variant="default">
           <CardHeader>
-            <CardTitle className="text-white">Email</CardTitle>
+            <CardTitle>Email</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input label="SMTP Host" placeholder="smtp.gmail.com" />
@@ -82,9 +82,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* Social Links */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700 lg:col-span-2">
+        <Card variant="default" className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-white">Social Media</CardTitle>
+            <CardTitle>Social Media</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -98,9 +98,9 @@ export default function SettingsPage() {
         </Card>
 
         {/* System Settings */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700 lg:col-span-2">
+        <Card variant="default" className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-white">System</CardTitle>
+            <CardTitle>System</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Checkbox label="Enable Maintenance Mode" />

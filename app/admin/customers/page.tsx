@@ -22,11 +22,11 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Customers</h1>
+        <h1 className="text-3xl font-bold text-neutral-900">Customers</h1>
         <Button variant="outline">Export List</Button>
       </div>
 
-      <Card variant="default" className="bg-neutral-800 border-neutral-700">
+      <Card variant="default">
         <CardContent className="p-6">
           <SearchInput placeholder="Search customers by name or email..." className="mb-6 w-full" />
 
@@ -46,11 +46,11 @@ export default function CustomersPage() {
               <TableBody>
                 {customers.map(customer => (
                   <TableRow key={customer.id}>
-                    <TableCell className="font-medium text-white">{customer.name}</TableCell>
+                    <TableCell className="font-medium text-neutral-900">{customer.name}</TableCell>
                     <TableCell className="text-neutral-400">{customer.email}</TableCell>
                     <TableCell className="text-neutral-400">{customer.phone}</TableCell>
-                    <TableCell className="text-white">{customer.orders}</TableCell>
-                    <TableCell className="text-white">₹{customer.totalSpent.toLocaleString()}</TableCell>
+                    <TableCell className="text-neutral-900">{customer.orders}</TableCell>
+                    <TableCell className="text-neutral-900">₹{customer.totalSpent.toLocaleString()}</TableCell>
                     <TableCell className="text-neutral-400">{customer.joinDate}</TableCell>
                     <TableCell className="text-sm">
                       <button className="hover:text-primary">View</button>

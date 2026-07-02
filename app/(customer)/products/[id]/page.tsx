@@ -13,6 +13,7 @@ import {
 } from '@/lib/mock/products';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { useCartStore } from '@/lib/stores/cart';
+import { useWishlistStore } from '@/lib/stores/wishlist';
 
 const TABS = ['Description', 'Specification', 'Warranty', 'Reviews', 'QnA', 'Country of Origin'] as const;
 type Tab = (typeof TABS)[number];
@@ -28,6 +29,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [deliveryMsg, setDeliveryMsg] = useState<{ ok: boolean; message: string } | null>(null);
   const [added, setAdded] = useState(false);
   const addItem = useCartStore(state => state.addItem);
+  const wishlistIds = useWishlistStore(state => state.productIds);
+  const toggleWishlist = useWishlistStore(state => state.toggle);
+  const inWishlist = product ? wishlistIds.includes(product.id) : false;
 
   const reviews = useMemo(
     () => productReviews.filter(r => r.productId === product?.id && r.status === 'APPROVED'),
@@ -195,12 +199,16 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="mt-3 flex gap-2 text-sm">
-            <Link
-              href="/wishlist"
-              className="flex-1 h-9 grid place-items-center rounded-lg border border-neutral-300 text-neutral-600 hover:border-primary-400 hover:text-primary-600"
+            <button
+              onClick={() => toggleWishlist(product.id)}
+              className={`flex-1 h-9 grid place-items-center rounded-lg border ${
+                inWishlist
+                  ? 'border-red-300 bg-red-50 text-red-600'
+                  : 'border-neutral-300 text-neutral-600 hover:border-primary-400 hover:text-primary-600'
+              }`}
             >
-              ♡ Wishlist
-            </Link>
+              {inWishlist ? '♥ Wishlisted' : '♡ Wishlist'}
+            </button>
             <Link
               href={`/compare?add=${product.id}`}
               className="flex-1 h-9 grid place-items-center rounded-lg border border-neutral-300 text-neutral-600 hover:border-primary-400 hover:text-primary-600"

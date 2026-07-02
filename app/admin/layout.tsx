@@ -1,10 +1,9 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
-import { IconButton } from '@/components/ui/Button';
-import { SearchInput } from '@/components/ui/Input';
-import { Avatar } from '@/components/ui/Avatar';
 
 const sidebarItems = [
   { icon: '📊', label: 'Dashboard', href: '/admin', id: 'dashboard' },
@@ -21,66 +20,94 @@ const sidebarItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActive = (href: string) =>
+    href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   return (
-    <div className='flex h-screen bg-neutral-900 text-neutral-100'>
-      <aside className={cn('bg-neutral-800 border-r border-neutral-700 transition-all duration-300 overflow-hidden', sidebarOpen ? 'w-64' : 'w-20')}>
-        <div className='p-4 border-b border-neutral-700'>
-          <div className={cn('font-bold text-primary-400', sidebarOpen ? 'text-xl' : 'text-lg')}>{sidebarOpen ? 'A.K.R Admin' : 'AK'}</div>
+    <div className="flex h-screen bg-neutral-100 text-neutral-900">
+      <aside
+        className={cn(
+          'bg-white border-r border-neutral-200 transition-all duration-300 overflow-y-auto shrink-0',
+          sidebarOpen ? 'w-64' : 'w-20'
+        )}
+      >
+        <div className="p-4 border-b border-neutral-200 flex items-center gap-2">
+          <span className="w-9 h-9 rounded-lg bg-primary-600 text-white font-bold grid place-items-center shrink-0">
+            A
+          </span>
+          {sidebarOpen && (
+            <div>
+              <p className="font-bold text-neutral-900 leading-tight">A.K.R Admin</p>
+              <p className="text-[10px] text-neutral-500 leading-tight">Store Management</p>
+            </div>
+          )}
         </div>
-        <nav className='space-y-1 p-2'>
+        <nav className="space-y-1 p-2">
           {sidebarItems.map(item => (
-            <a key={item.id} href={item.href} className='flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-neutral-700 text-neutral-300'>
-              <span className='text-lg'>{item.icon}</span>
-              {sidebarOpen && <span className='text-sm font-medium'>{item.label}</span>}
-            </a>
+            <Link
+              key={item.id}
+              href={item.href}
+              className={cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                isActive(item.href)
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+              )}
+            >
+              <span className="text-lg">{item.icon}</span>
+              {sidebarOpen && <span>{item.label}</span>}
+            </Link>
           ))}
         </nav>
+        <div className="p-2 mt-4 border-t border-neutral-200">
+          <Link
+            href="/"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-neutral-600 hover:bg-neutral-100"
+          >
+            <span className="text-lg">🛍️</span>
+            {sidebarOpen && <span>View Store</span>}
+          </Link>
+        </div>
       </aside>
 
-      <div className='flex-1 flex flex-col overflow-hidden'>
-        <header className='bg-neutral-800 border-b border-neutral-700 px-6 py-4 flex items-center justify-between'>
-          <div className='flex items-center gap-4 flex-1'>
-            <IconButton variant='ghost' size='md' onClick={() => setSidebarOpen(!sidebarOpen)}>
-              <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
-                <path fillRule='evenodd' d='M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z' clipRule='evenodd' />
-              </svg>
-            </IconButton>
-            <SearchInput placeholder='Search...' className='w-80' />
-          </div>
-          <div className='flex items-center gap-4'>
-            <IconButton variant='ghost' size='md' onClick={() => setNotificationsOpen(!notificationsOpen)}>
-              <svg className='w-5 h-5' fill='currentColor' viewBox='0 0 20 20'>
-                <path d='M10.893 1.416a1 1 0 00-1.786 0l-.894 3.342A2 2 0 006.46 7.04H2.819a1 1 0 00-.588 1.82l2.717 1.98a2 2 0 00.588 3.282l-.894 3.342a1 1 0 001.586 1.02l2.717-1.98a2 2 0 002.354 0l2.717 1.98a1 1 0 001.586-1.02l-.894-3.342a2 2 0 00.588-3.282l2.717-1.98a1 1 0 00-.588-1.82h-3.641a2 2 0 00-1.753-1.282l-.894-3.342z' />
-              </svg>
-            </IconButton>
-            {notificationsOpen && (
-              <div className='absolute right-6 top-16 w-80 bg-neutral-700 rounded-lg p-4 border border-neutral-600 shadow-xl'>
-                <h3 className='font-semibold mb-3'>Notifications</h3>
-                <div className='space-y-2'>
-                  <div className='p-2 bg-neutral-600 rounded text-sm'>⚠️ Low stock: Arduino Uno</div>
-                  <div className='p-2 bg-neutral-600 rounded text-sm'>📦 New order received</div>
-                  <div className='p-2 bg-neutral-600 rounded text-sm'>⭐ New review pending</div>
-                </div>
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <header className="bg-white border-b border-neutral-200 px-6 h-14 flex items-center justify-between shrink-0">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="w-9 h-9 grid place-items-center rounded-lg text-neutral-600 hover:bg-neutral-100"
+            aria-label="Toggle sidebar"
+          >
+            ☰
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setProfileOpen(!profileOpen)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-neutral-100"
+            >
+              <span className="w-8 h-8 rounded-full bg-primary-600 text-white text-xs font-bold grid place-items-center">
+                AD
+              </span>
+              <span className="text-sm font-medium hidden sm:block">Admin</span>
+            </button>
+            {profileOpen && (
+              <div className="absolute right-0 top-12 w-48 bg-white rounded-lg border border-neutral-200 shadow-lg py-1 z-50">
+                <Link href="/admin/settings" className="block px-4 py-2 hover:bg-neutral-50 text-sm">
+                  Settings
+                </Link>
+                <Link href="/" className="block px-4 py-2 hover:bg-neutral-50 text-sm">
+                  View Store
+                </Link>
+                <button className="w-full text-left px-4 py-2 hover:bg-neutral-50 text-sm text-red-600 border-t border-neutral-100">
+                  Logout
+                </button>
               </div>
             )}
-            <div className='relative'>
-              <button onClick={() => setProfileOpen(!profileOpen)}>
-                <Avatar initials='AD' />
-              </button>
-              {profileOpen && (
-                <div className='absolute right-0 top-12 w-48 bg-neutral-700 rounded-lg border border-neutral-600 shadow-xl'>
-                  <a href='/admin/profile' className='block px-4 py-2 hover:bg-neutral-600 text-sm'>Profile</a>
-                  <a href='/admin/settings' className='block px-4 py-2 hover:bg-neutral-600 text-sm'>Settings</a>
-                  <button className='w-full text-left px-4 py-2 hover:bg-neutral-600 text-sm'>Logout</button>
-                </div>
-              )}
-            </div>
           </div>
         </header>
-        <main className='flex-1 overflow-auto bg-neutral-900 p-6'>{children}</main>
+        <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
   );

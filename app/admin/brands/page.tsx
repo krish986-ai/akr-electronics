@@ -8,9 +8,9 @@ export default function AdminBrandsPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Brands</h1>
-          <p className="text-sm text-neutral-400">{brands.length} brands in catalog</p>
+          <p className="text-sm text-neutral-500">{brands.length} brands in catalog</p>
         </div>
-        <button className="px-4 h-10 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-500">
+        <button className="px-4 h-10 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
           + Add Brand
         </button>
       </div>
@@ -19,9 +19,9 @@ export default function AdminBrandsPage() {
         {brands.map(brand => {
           const count = products.filter(p => p.brandSlug === brand.slug).length;
           return (
-            <div key={brand.id} className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+            <div key={brand.id} className="bg-white border border-neutral-200 rounded-xl p-5">
               <div className="flex items-center gap-3">
-                <span className="w-10 h-10 rounded-lg bg-neutral-700 grid place-items-center font-bold text-primary-400">
+                <span className="w-10 h-10 rounded-lg bg-neutral-100 grid place-items-center font-bold text-primary-600">
                   {brand.name[0]}
                 </span>
                 <div>
@@ -29,10 +29,10 @@ export default function AdminBrandsPage() {
                   <p className="text-xs text-neutral-500">/{brand.slug}</p>
                 </div>
               </div>
-              <p className="text-xs text-neutral-400 mt-3">{brand.description}</p>
+              <p className="text-xs text-neutral-500 mt-3">{brand.description}</p>
               <div className="flex items-center justify-between mt-4">
-                <span className="text-xs text-neutral-400">{count} products</span>
-                <button className="text-xs text-primary-400 hover:underline">Edit</button>
+                <span className="text-xs text-neutral-500">{count} products</span>
+                <button className="text-xs text-primary-600 hover:underline">Edit</button>
               </div>
             </div>
           );

@@ -1,16 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils/cn';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { RadioGroup } from '@/components/ui/Radio';
-import { products } from '@/lib/mock/products';
+import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
+import { coupons, Coupon } from '@/lib/mock/products';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
 export default function CheckoutPage() {
+  const { items, clearCart } = useCartStore();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [step, setStep] = useState(1);
   const [shippingAddress, setShippingAddress] = useState({
     name: '',
@@ -23,41 +29,101 @@ export default function CheckoutPage() {
   });
 
   const [shippingMethod, setShippingMethod] = useState('standard');
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [coupon, setCoupon] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponError, setCouponError] = useState('');
+  const [placedOrderId, setPlacedOrderId] = useState('');
 
-  const cartItems = [
-    { productId: '1', quantity: 1 },
-    { productId: '4', quantity: 2 },
-  ];
-
-  const cartProducts = cartItems
-    .map(item => {
-      const product = products.find(p => p.id === item.productId);
-      return product ? { ...item, product } : null;
-    })
-    .filter(Boolean) as any[];
-
-  const subtotal = cartProducts.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-  const tax = Math.round(subtotal * 0.18);
-  const shippingCost = shippingMethod === 'express' ? 100 : subtotal > 500 ? 0 : 50;
-  const discount = appliedCoupon ? Math.round(subtotal * 0.1) : 0;
-  const total = subtotal + tax + shippingCost - discount;
+  const subtotal = cartSubtotal(items);
+  const shippingCost = shippingMethod === 'express' ? 100 : cartShipping(subtotal);
+  const discount = appliedCoupon
+    ? appliedCoupon.type === 'PERCENT'
+      ? Math.round((subtotal * appliedCoupon.value) / 100)
+      : appliedCoupon.value
+    : 0;
+  const total = Math.max(0, subtotal + shippingCost - discount);
 
   const handleApplyCoupon = () => {
-    if (coupon === 'SAVE10') {
-      setAppliedCoupon('SAVE10');
-      setCoupon('');
-    } else {
-      alert('Invalid coupon code');
+    const found = coupons.find(c => c.code === coupon.trim().toUpperCase() && c.active);
+    if (!found) {
+      setCouponError('Invalid or expired coupon code');
+      return;
     }
+    if (subtotal < found.minOrder) {
+      setCouponError(`This coupon needs a minimum order of ₹${found.minOrder}`);
+      return;
+    }
+    setAppliedCoupon(found);
+    setCouponError('');
+    setCoupon('');
   };
 
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setShippingAddress(prev => ({ ...prev, [name]: value }));
   };
+
+  const addressComplete =
+    shippingAddress.name.trim() !== '' &&
+    /.+@.+\..+/.test(shippingAddress.email) &&
+    shippingAddress.phone.trim().length >= 10 &&
+    shippingAddress.address.trim() !== '' &&
+    shippingAddress.city.trim() !== '' &&
+    /^[1-9][0-9]{5}$/.test(shippingAddress.pincode);
+
+  const placeOrder = () => {
+    const orderId = `AKR-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    setPlacedOrderId(orderId);
+    clearCart();
+  };
+
+  if (!mounted) return null;
+
+  if (placedOrderId) {
+    return (
+      <div className={cn(container, 'py-20 max-w-xl text-center')}>
+        <p className="text-6xl mb-4">🎉</p>
+        <h1 className="text-3xl font-bold text-neutral-900 mb-2">Order Placed!</h1>
+        <p className="text-neutral-600 mb-1">
+          Your order number is <span className="font-mono font-bold">{placedOrderId}</span>
+        </p>
+        <p className="text-sm text-neutral-500 mb-8">
+          A confirmation will be sent to {shippingAddress.email}. Payment: {paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase()}.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Link
+            href="/track-order"
+            className="h-11 px-6 leading-[44px] rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
+          >
+            Track Order
+          </Link>
+          <Link
+            href="/products"
+            className="h-11 px-6 leading-[44px] rounded-lg border border-neutral-300 text-neutral-700 font-medium hover:bg-neutral-50"
+          >
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className={cn(container, 'py-20 text-center')}>
+        <p className="text-5xl mb-4">🛒</p>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-2">Your cart is empty</h1>
+        <p className="text-sm text-neutral-500 mb-6">Add products to your cart before checking out.</p>
+        <Link
+          href="/products"
+          className="inline-block bg-primary-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-700"
+        >
+          Browse Products
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className={cn(container, 'py-12')}>
@@ -142,8 +208,8 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    <Button onClick={() => setStep(2)} fullWidth className="mt-4">
-                      Continue to Shipping
+                    <Button onClick={() => setStep(2)} fullWidth className="mt-4" disabled={!addressComplete}>
+                      {addressComplete ? 'Continue to Shipping' : 'Fill all address fields to continue'}
                     </Button>
                   </div>
                 )}
@@ -202,15 +268,20 @@ export default function CheckoutPage() {
               <CardContent>
                 <RadioGroup
                   options={[
-                    { value: 'card', label: 'Credit/Debit Card' },
-                    { value: 'upi', label: 'UPI' },
-                    { value: 'wallet', label: 'Digital Wallet' },
+                    { value: 'cod', label: '💵 Cash on Delivery' },
+                    { value: 'upi', label: 'UPI (available after payment integration)' },
+                    { value: 'card', label: 'Credit/Debit Card (available after payment integration)' },
                   ]}
                   value={paymentMethod}
                   onChange={setPaymentMethod}
                 />
+                {paymentMethod !== 'cod' && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-3">
+                    Online payments arrive with Razorpay integration (Phase 18). Use Cash on Delivery for now.
+                  </p>
+                )}
 
-                <Button size="lg" fullWidth className="mt-6">
+                <Button size="lg" fullWidth className="mt-6" disabled={paymentMethod !== 'cod'} onClick={placeOrder}>
                   Place Order - ₹{total.toLocaleString('en-IN')}
                 </Button>
               </CardContent>
@@ -227,10 +298,10 @@ export default function CheckoutPage() {
             <CardContent className="space-y-4">
               {/* Items */}
               <div className="space-y-2 pb-4 border-b">
-                {cartProducts.map(item => (
-                  <div key={item.product.id} className="flex justify-between text-sm">
-                    <span className="text-neutral-600">{item.product.name} × {item.quantity}</span>
-                    <span className="font-medium">₹{(item.product.price * item.quantity).toLocaleString('en-IN')}</span>
+                {items.map(item => (
+                  <div key={item.productId} className="flex justify-between text-sm">
+                    <span className="text-neutral-600">{item.name} × {item.quantity}</span>
+                    <span className="font-medium">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                   </div>
                 ))}
               </div>
@@ -238,20 +309,16 @@ export default function CheckoutPage() {
               {/* Costs */}
               <div className="space-y-2 pb-4 border-b text-sm">
                 <div className="flex justify-between">
-                  <span className="text-neutral-600">Subtotal</span>
+                  <span className="text-neutral-600">Subtotal (incl. GST)</span>
                   <span>₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutral-600">Shipping</span>
                   <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost}`}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-neutral-600">Tax (18%)</span>
-                  <span>₹{tax.toLocaleString('en-IN')}</span>
-                </div>
                 {appliedCoupon && (
                   <div className="flex justify-between text-green-600">
-                    <span>Discount ({appliedCoupon})</span>
+                    <span>Discount ({appliedCoupon.code})</span>
                     <span>-₹{discount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
@@ -271,6 +338,7 @@ export default function CheckoutPage() {
                       Apply
                     </Button>
                   </div>
+                  {couponError && <p className="text-xs text-red-600">{couponError}</p>}
                 </div>
               )}
 

@@ -25,11 +25,11 @@ export default function ProductsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Products</h1>
+        <h1 className="text-3xl font-bold text-neutral-900">Products</h1>
         <Button variant="primary">+ New Product</Button>
       </div>
 
-      <Card variant="default" className="bg-neutral-800 border-neutral-700">
+      <Card variant="default">
         <CardContent className="p-6">
           <div className="flex gap-4 mb-6">
             <SearchInput placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="flex-1" />
@@ -53,10 +53,10 @@ export default function ProductsPage() {
               <TableBody>
                 {filtered.map(product => (
                   <TableRow key={product.id}>
-                    <TableCell className="font-medium text-white">{product.name}</TableCell>
+                    <TableCell className="font-medium text-neutral-900">{product.name}</TableCell>
                     <TableCell className="text-neutral-400">{product.sku}</TableCell>
                     <TableCell className="text-neutral-400">{product.category}</TableCell>
-                    <TableCell className="text-white">₹{product.price}</TableCell>
+                    <TableCell className="text-neutral-900">₹{product.price}</TableCell>
                     <TableCell className={product.stock < 20 ? 'text-warning' : 'text-success'}>{product.stock}</TableCell>
                     <TableCell><Badge variant={product.status === 'Published' ? 'success' : 'primary'} size="sm">{product.status}</Badge></TableCell>
                     <TableCell className="text-sm space-x-2">

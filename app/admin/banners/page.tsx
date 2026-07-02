@@ -18,14 +18,14 @@ export default function AdminBannersPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold">Banners & Campaigns</h1>
-          <p className="text-sm text-neutral-400">Control the homepage hero carousel and announcement bar</p>
+          <p className="text-sm text-neutral-500">Control the homepage hero carousel and announcement bar</p>
         </div>
-        <button className="px-4 h-10 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-500">
+        <button className="px-4 h-10 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
           + New Banner
         </button>
       </div>
 
-      <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 mb-6">
+      <div className="bg-white border border-neutral-200 rounded-xl p-5 mb-6">
         <h2 className="text-sm font-semibold mb-2">📢 Announcement Bar</h2>
         <div className="flex gap-2">
           <input
@@ -34,11 +34,11 @@ export default function AdminBannersPage() {
               setAnnouncement(e.target.value);
               setSaved(false);
             }}
-            className="flex-1 h-10 rounded-lg bg-neutral-900 border border-neutral-700 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="flex-1 h-10 rounded-lg bg-neutral-50 border border-neutral-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
           <button
             onClick={() => setSaved(true)}
-            className="px-4 h-10 rounded-lg bg-neutral-700 text-sm font-medium hover:bg-neutral-600"
+            className="px-4 h-10 rounded-lg bg-neutral-100 text-sm font-medium hover:bg-neutral-200"
           >
             {saved ? '✓ Saved' : 'Save'}
           </button>
@@ -50,30 +50,30 @@ export default function AdminBannersPage() {
         {banners.map(b => (
           <div
             key={b.id}
-            className={`bg-neutral-800 border rounded-xl p-4 flex items-center gap-4 ${
-              b.active ? 'border-neutral-700' : 'border-neutral-700 opacity-50'
+            className={`bg-white border rounded-xl p-4 flex items-center gap-4 ${
+              b.active ? 'border-neutral-200' : 'border-neutral-200 opacity-50'
             }`}
           >
             <div className={`w-24 h-14 rounded-lg bg-gradient-to-r ${b.gradient} shrink-0`} />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{b.title}</p>
-              <p className="text-xs text-neutral-400 truncate">{b.subtitle}</p>
+              <p className="text-xs text-neutral-500 truncate">{b.subtitle}</p>
               <p className="text-xs text-neutral-500 mt-0.5">
                 CTA: “{b.cta}” → {b.href}
               </p>
             </div>
             {b.badge && (
-              <span className="text-[10px] bg-neutral-700 px-2 py-1 rounded-full whitespace-nowrap">{b.badge}</span>
+              <span className="text-[10px] bg-neutral-100 px-2 py-1 rounded-full whitespace-nowrap">{b.badge}</span>
             )}
             <button
               onClick={() => toggleBanner(b.id)}
               className={`text-xs px-3 py-1.5 rounded-lg font-medium ${
-                b.active ? 'bg-emerald-600/20 text-emerald-400' : 'bg-neutral-700 text-neutral-400'
+                b.active ? 'bg-emerald-100 text-emerald-700' : 'bg-neutral-100 text-neutral-500'
               }`}
             >
               {b.active ? 'Active' : 'Inactive'}
             </button>
-            <button className="text-xs text-primary-400 hover:underline">Edit</button>
+            <button className="text-xs text-primary-600 hover:underline">Edit</button>
           </div>
         ))}
       </div>

@@ -32,7 +32,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-neutral-400">Store overview · mock data until backend integration (Phase 17)</p>
+        <p className="text-sm text-neutral-500">Store overview · mock data until backend integration (Phase 17)</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -40,27 +40,27 @@ export default function AdminDashboard() {
           <Link
             key={s.label}
             href={s.href}
-            className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 hover:border-primary-500 transition-colors"
+            className="bg-white border border-neutral-200 rounded-xl p-5 hover:border-primary-500 transition-colors"
           >
             <span className="text-2xl">{s.icon}</span>
             <p className="text-2xl font-bold mt-3">{s.value}</p>
-            <p className="text-sm text-neutral-300">{s.label}</p>
+            <p className="text-sm text-neutral-700">{s.label}</p>
             <p className="text-xs text-neutral-500 mt-1">{s.sub}</p>
           </Link>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+        <div className="bg-white border border-neutral-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">Recent Orders</h2>
-            <Link href="/admin/orders" className="text-xs text-primary-400 hover:underline">
+            <Link href="/admin/orders" className="text-xs text-primary-600 hover:underline">
               View all →
             </Link>
           </div>
           <div className="space-y-2">
             {recentOrders.map(o => (
-              <div key={o.id} className="flex items-center justify-between py-2 border-b border-neutral-700/50 last:border-0">
+              <div key={o.id} className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-0">
                 <div>
                   <p className="text-sm font-mono">{o.id}</p>
                   <p className="text-xs text-neutral-500">{o.customer}</p>
@@ -70,10 +70,10 @@ export default function AdminDashboard() {
                   <span
                     className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       o.status === 'DELIVERED'
-                        ? 'bg-emerald-600/20 text-emerald-400'
+                        ? 'bg-emerald-100 text-emerald-700'
                         : o.status === 'SHIPPED'
-                          ? 'bg-blue-600/20 text-blue-400'
-                          : 'bg-amber-600/20 text-amber-400'
+                          ? 'bg-blue-100 text-blue-700'
+                          : 'bg-amber-100 text-amber-600'
                     }`}
                   >
                     {o.status}
@@ -84,21 +84,21 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+        <div className="bg-white border border-neutral-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold">⚠️ Low Stock Alerts</h2>
-            <Link href="/admin/products" className="text-xs text-primary-400 hover:underline">
+            <Link href="/admin/products" className="text-xs text-primary-600 hover:underline">
               Manage stock →
             </Link>
           </div>
           <div className="space-y-2">
             {lowStock.map(p => (
-              <div key={p.id} className="flex items-center justify-between py-2 border-b border-neutral-700/50 last:border-0">
+              <div key={p.id} className="flex items-center justify-between py-2 border-b border-neutral-200 last:border-0">
                 <div>
                   <p className="text-sm">{p.name}</p>
                   <p className="text-xs text-neutral-500 font-mono">{p.sku}</p>
                 </div>
-                <span className={`text-sm font-bold ${p.stock < 50 ? 'text-red-400' : 'text-amber-400'}`}>
+                <span className={`text-sm font-bold ${p.stock < 50 ? 'text-red-600' : 'text-amber-600'}`}>
                   {p.stock} left
                 </span>
               </div>
@@ -108,11 +108,11 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+      <div className="bg-white border border-neutral-200 rounded-xl p-5">
         <h2 className="font-semibold mb-4">🏆 Top Products (by review volume)</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {topProducts.map(p => (
-            <div key={p.id} className="bg-neutral-900 rounded-lg p-3 border border-neutral-700">
+            <div key={p.id} className="bg-neutral-50 rounded-lg p-3 border border-neutral-200">
               <p className="text-xs font-medium line-clamp-2">{p.name}</p>
               <p className="text-sm font-bold mt-1">₹{p.price.toLocaleString('en-IN')}</p>
               <p className="text-xs text-neutral-500 mt-0.5">
