@@ -22,6 +22,8 @@ service cloud.firestore {
     match /categories/{id} { allow read: if true; allow write: if isAdmin(); }
     match /kits/{id} { allow read: if true; allow write: if isAdmin(); }
     match /coupons/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /banners/{id} { allow read: if true; allow write: if isAdmin(); }
+    match /config/{id} { allow read: if true; allow write: if isAdmin(); }
 
     // Reviews: everyone reads approved content via queries; signed-in users
     // create; only admins moderate/delete

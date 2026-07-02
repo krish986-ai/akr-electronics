@@ -58,7 +58,25 @@ export interface HeroBanner {
   href: string;
   gradient: string;
   badge?: string;
+  active?: boolean;
 }
+
+export interface StoreConfig {
+  storeName: string;
+  supportEmail: string;
+  supportPhone: string;
+  announcement: string;
+  freeDeliveryThreshold: number;
+}
+
+export const defaultStoreConfig: StoreConfig = {
+  storeName: 'A.K.R Electronics',
+  supportEmail: 'support@akrelectronics.com',
+  supportPhone: '1800 123 4567',
+  announcement:
+    'Grand Opening Offer — Free delivery above ₹999 · Use code SAVE10 for 10% off',
+  freeDeliveryThreshold: 999,
+};
 
 export interface ProductReview {
   id: string;

@@ -7,12 +7,16 @@ import {
   coupons as mockCoupons,
   productReviews as mockReviews,
   productQuestions as mockQuestions,
+  heroBanners as mockBanners,
+  defaultStoreConfig,
   Product,
   Brand,
   CategoryNode,
   Coupon,
   ProductReview,
   ProductQuestion,
+  HeroBanner,
+  StoreConfig,
 } from '@/lib/mock/products';
 
 // Single data-access point for the storefront. Reads Firestore when Firebase
@@ -79,6 +83,27 @@ export async function getReviews(): Promise<ProductReview[]> {
 
 export async function getQuestions(): Promise<ProductQuestion[]> {
   return fromCollection<ProductQuestion>('questions', mockQuestions);
+}
+
+export async function getBanners(): Promise<HeroBanner[]> {
+  return fromCollection<HeroBanner>('banners', mockBanners);
+}
+
+export async function getActiveBanners(): Promise<HeroBanner[]> {
+  const banners = await getBanners();
+  const active = banners.filter(b => b.active !== false);
+  return active.length > 0 ? active : mockBanners;
+}
+
+export async function getStoreConfig(): Promise<StoreConfig> {
+  if (!isFirebaseConfigured || !db) return defaultStoreConfig;
+  try {
+    const snapshot = await getDoc(doc(db, 'config', 'store'));
+    if (!snapshot.exists()) return defaultStoreConfig;
+    return { ...defaultStoreConfig, ...(snapshot.data() as Partial<StoreConfig>) };
+  } catch {
+    return defaultStoreConfig;
+  }
 }
 
 export function isLiveData(): boolean {

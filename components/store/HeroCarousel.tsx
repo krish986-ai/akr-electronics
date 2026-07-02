@@ -2,17 +2,26 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { heroBanners } from '@/lib/mock/products';
+import { heroBanners, HeroBanner } from '@/lib/mock/products';
+import { getActiveBanners } from '@/lib/data/catalog';
 
 export function HeroCarousel() {
+  const [banners, setBanners] = useState<HeroBanner[]>(heroBanners);
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => setIndex(i => (i + 1) % heroBanners.length), 6000);
-    return () => clearInterval(timer);
+    getActiveBanners().then(active => {
+      setBanners(active);
+      setIndex(0);
+    });
   }, []);
 
-  const banner = heroBanners[index];
+  useEffect(() => {
+    const timer = setInterval(() => setIndex(i => (i + 1) % banners.length), 6000);
+    return () => clearInterval(timer);
+  }, [banners.length]);
+
+  const banner = banners[index] ?? banners[0];
 
   return (
     <section
@@ -36,7 +45,7 @@ export function HeroCarousel() {
         </div>
       </div>
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-        {heroBanners.map((b, i) => (
+        {banners.map((b, i) => (
           <button
             key={b.id}
             aria-label={`Go to slide ${i + 1}`}

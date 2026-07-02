@@ -1,71 +1,113 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { SearchInput } from '@/components/ui/Input';
-import { Card, CardContent } from '@/components/ui/Card';
-import { Table, TableHead, TableBody, TableRow, TableHeader, TableCell } from '@/components/ui/Table';
-import { } from '@/components/ui/Avatar';
-import { Pagination } from '@/components/ui/Pagination';
+import { useEffect, useState } from 'react';
+import { adminFetch } from '@/lib/api/admin-client';
 
-export default function CustomersPage() {
-  const [currentPage, setCurrentPage] = useState(1);
+interface CustomerRow {
+  uid: string;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string;
+  lastSignIn: string;
+  disabled: boolean;
+  emailVerified: boolean;
+}
 
-  const customers = [
-    { id: 1, name: 'John Doe', email: 'john@example.com', phone: '+91 9876543210', orders: 5, totalSpent: 25000, joinDate: '15-05-2026' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', phone: '+91 9876543211', orders: 3, totalSpent: 12500, joinDate: '20-05-2026' },
-    { id: 3, name: 'Bob Wilson', email: 'bob@example.com', phone: '+91 9876543212', orders: 8, totalSpent: 45000, joinDate: '01-06-2026' },
-    { id: 4, name: 'Alice Brown', email: 'alice@example.com', phone: '+91 9876543213', orders: 2, totalSpent: 8500, joinDate: '10-06-2026' },
-    { id: 5, name: 'Charlie Davis', email: 'charlie@example.com', phone: '+91 9876543214', orders: 4, totalSpent: 18000, joinDate: '12-06-2026' },
-  ];
+export default function AdminCustomersPage() {
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await adminFetch('/api/admin/customers');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Failed to load');
+        setCustomers(data.customers);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to load customers');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const filtered = customers.filter(
+    c =>
+      c.email.toLowerCase().includes(search.toLowerCase()) ||
+      c.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-neutral-900">Customers</h1>
-        <Button variant="outline">Export List</Button>
+      <div className="flex justify-between items-center flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Customers</h1>
+          <p className="text-sm text-neutral-500">
+            {customers.length} registered account{customers.length === 1 ? '' : 's'} (live from Firebase)
+          </p>
+        </div>
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search email or name..."
+          className="h-10 w-64 rounded-lg border border-neutral-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
       </div>
 
-      <Card variant="default">
-        <CardContent className="p-6">
-          <SearchInput placeholder="Search customers by name or email..." className="mb-6 w-full" />
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+      )}
 
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableHeader>Name</TableHeader>
-                  <TableHeader>Email</TableHeader>
-                  <TableHeader>Phone</TableHeader>
-                  <TableHeader>Orders</TableHeader>
-                  <TableHeader>Total Spent</TableHeader>
-                  <TableHeader>Joined</TableHeader>
-                  <TableHeader>Action</TableHeader>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {customers.map(customer => (
-                  <TableRow key={customer.id}>
-                    <TableCell className="font-medium text-neutral-900">{customer.name}</TableCell>
-                    <TableCell className="text-neutral-400">{customer.email}</TableCell>
-                    <TableCell className="text-neutral-400">{customer.phone}</TableCell>
-                    <TableCell className="text-neutral-900">{customer.orders}</TableCell>
-                    <TableCell className="text-neutral-900">₹{customer.totalSpent.toLocaleString()}</TableCell>
-                    <TableCell className="text-neutral-400">{customer.joinDate}</TableCell>
-                    <TableCell className="text-sm">
-                      <button className="hover:text-primary">View</button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex justify-center mt-6">
-            <Pagination currentPage={currentPage} totalPages={8} onPageChange={setCurrentPage} />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden">
+        {loading ? (
+          <p className="p-8 text-center text-sm text-neutral-500">Loading customers...</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 text-neutral-500 text-xs uppercase">
+              <tr>
+                <th className="text-left px-4 py-3">Customer</th>
+                <th className="text-left px-4 py-3">Role</th>
+                <th className="text-left px-4 py-3">Verified</th>
+                <th className="text-left px-4 py-3">Joined</th>
+                <th className="text-left px-4 py-3">Last Sign-in</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {filtered.map(c => (
+                <tr key={c.uid} className="hover:bg-neutral-50">
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-neutral-900">{c.name}</p>
+                    <p className="text-xs text-neutral-500">{c.email}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full ${
+                        c.role === 'ADMIN' ? 'bg-primary-50 text-primary-700' : 'bg-neutral-100 text-neutral-600'
+                      }`}
+                    >
+                      {c.role}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">{c.emailVerified ? '✅' : '—'}</td>
+                  <td className="px-4 py-3 text-neutral-500 text-xs">{c.createdAt}</td>
+                  <td className="px-4 py-3 text-neutral-500 text-xs">{c.lastSignIn || 'Never'}</td>
+                </tr>
+              ))}
+              {filtered.length === 0 && !error && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-8 text-center text-neutral-500">
+                    No customers match your search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,62 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { WebsiteConfigService } from '@/lib/services/website-config-service';
+import { z } from 'zod';
+import { getAdminDb } from '@/lib/firebase/admin';
+import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { defaultStoreConfig } from '@/lib/mock/products';
 
-export async function GET(req: NextRequest) {
+const settingsSchema = z.object({
+  storeName: z.string().min(2).max(100),
+  supportEmail: z.string().email(),
+  supportPhone: z.string().min(6).max(20),
+  announcement: z.string().max(300),
+  freeDeliveryThreshold: z.number().min(0),
+});
+
+export async function GET(request: NextRequest) {
+  const check = await verifyAdminRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
   try {
-    const userRole = req.headers.get('x-user-role');
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const config = await WebsiteConfigService.getConfig();
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...config,
-        taxRate: config.taxRate.toString(),
-        shippingBaseCost: config.shippingBaseCost.toString(),
-        freeShippingThreshold: config.freeShippingThreshold?.toString(),
-      },
-    });
-  } catch (error) {
-    console.error('Fetch settings error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch settings', details: error instanceof Error ? error.message : '' },
-      { status: 500 }
-    );
+    const doc = await getAdminDb().collection('config').doc('store').get();
+    return NextResponse.json({ ...defaultStoreConfig, ...(doc.data() ?? {}) });
+  } catch {
+    return NextResponse.json({ error: 'Failed to load settings' }, { status: 500 });
   }
 }
 
-export async function PUT(req: NextRequest) {
+export async function PUT(request: NextRequest) {
+  const check = await verifyAdminRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
   try {
-    const userRole = req.headers.get('x-user-role');
-    if (userRole !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const body = await req.json();
-
-    const config = await WebsiteConfigService.updateConfig(body);
-
-    if (!config) {
-      return NextResponse.json({ error: 'Failed to update settings' }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: {
-        ...config,
-        taxRate: config.taxRate.toString(),
-        shippingBaseCost: config.shippingBaseCost.toString(),
-        freeShippingThreshold: config.freeShippingThreshold?.toString(),
-      },
-    });
+    const settings = settingsSchema.parse(await request.json());
+    await getAdminDb().collection('config').doc('store').set(settings);
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Update settings error:', error);
-    return NextResponse.json(
-      { error: 'Failed to update settings', details: error instanceof Error ? error.message : '' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
   }
 }

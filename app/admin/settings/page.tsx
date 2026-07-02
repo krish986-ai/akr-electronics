@@ -1,117 +1,133 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Checkbox } from '@/components/ui/Checkbox';
-import { Select } from '@/components/ui/Select';
+import { useEffect, useState } from 'react';
+import { StoreConfig, defaultStoreConfig } from '@/lib/mock/products';
+import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 
-export default function SettingsPage() {
+export default function AdminSettingsPage() {
+  const [settings, setSettings] = useState<StoreConfig>(defaultStoreConfig);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await adminFetch('/api/admin/settings');
+        const data = await res.json();
+        if (res.ok) setSettings(data);
+      } catch {
+        // keep defaults
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    setSaved(false);
+    try {
+      await adminMutate('/api/admin/settings', 'PUT', settings);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setSaving(false);
+    }
   };
 
+  if (loading) {
+    return <p className="p-8 text-center text-sm text-neutral-500">Loading settings...</p>;
+  }
+
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-neutral-900">Settings</h1>
-
-      {saved && <div className="p-4 bg-success rounded text-white">Settings saved successfully!</div>}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* General Settings */}
-        <Card variant="default">
-          <CardHeader>
-            <CardTitle>General</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input label="Website Name" placeholder="A.K.R Electronics" />
-            <Input label="Website URL" placeholder="https://akrelectronics.com" />
-            <Input label="Currency" placeholder="INR" />
-            <Input label="Tax Rate (%)" placeholder="18" />
-            <Button onClick={handleSave} variant="primary" fullWidth>Save Changes</Button>
-          </CardContent>
-        </Card>
-
-        {/* Contact Settings */}
-        <Card variant="default">
-          <CardHeader>
-            <CardTitle>Contact Info</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input label="Email" placeholder="support@akrelectronics.com" />
-            <Input label="Phone" placeholder="+91 XXXXXXXXXX" />
-            <Input label="Address" placeholder="123 Tech Street, Bangalore" />
-            <Button onClick={handleSave} variant="primary" fullWidth>Save Changes</Button>
-          </CardContent>
-        </Card>
-
-        {/* Appearance Settings */}
-        <Card variant="default">
-          <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Select
-              label="Theme"
-              options={[
-                { label: 'Dark', value: 'dark' },
-                { label: 'Light', value: 'light' },
-              ]}
-            />
-            <Input label="Primary Color" placeholder="#0066FF" />
-            <Input label="Secondary Color" placeholder="#FF6B35" />
-            <Button onClick={handleSave} variant="primary" fullWidth>Save Changes</Button>
-          </CardContent>
-        </Card>
-
-        {/* Email Settings */}
-        <Card variant="default">
-          <CardHeader>
-            <CardTitle>Email</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Input label="SMTP Host" placeholder="smtp.gmail.com" />
-            <Input label="SMTP Port" placeholder="587" />
-            <Input label="From Address" placeholder="noreply@akrelectronics.com" />
-            <Button onClick={handleSave} variant="primary" fullWidth>Save Changes</Button>
-          </CardContent>
-        </Card>
-
-        {/* Social Links */}
-        <Card variant="default" className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Social Media</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Facebook" placeholder="https://facebook.com/akrelectronics" />
-              <Input label="Twitter" placeholder="https://twitter.com/akrelectronics" />
-              <Input label="Instagram" placeholder="https://instagram.com/akrelectronics" />
-              <Input label="LinkedIn" placeholder="https://linkedin.com/company/akr" />
-            </div>
-            <Button onClick={handleSave} variant="primary" fullWidth>Save Changes</Button>
-          </CardContent>
-        </Card>
-
-        {/* System Settings */}
-        <Card variant="default" className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>System</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Checkbox label="Enable Maintenance Mode" />
-            <Checkbox label="Allow User Registration" defaultChecked />
-            <Checkbox label="Enable Guest Checkout" defaultChecked />
-            <Checkbox label="Enable Product Reviews" defaultChecked />
-            <Checkbox label="Send Email Notifications" defaultChecked />
-            <Button onClick={handleSave} variant="primary" fullWidth>Save Changes</Button>
-          </CardContent>
-        </Card>
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-neutral-900">Settings</h1>
+        <p className="text-sm text-neutral-500">Store-wide configuration · saved to Firestore</p>
       </div>
+
+      {saved && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+          ✓ Settings saved — changes appear on the store within a few minutes
+        </div>
+      )}
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+      )}
+
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
+        <h2 className="font-semibold text-neutral-900">Store Identity</h2>
+        <Field label="Store name">
+          <input
+            className={inputCls}
+            value={settings.storeName}
+            onChange={e => setSettings(s => ({ ...s, storeName: e.target.value }))}
+          />
+        </Field>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Support email">
+            <input
+              type="email"
+              className={inputCls}
+              value={settings.supportEmail}
+              onChange={e => setSettings(s => ({ ...s, supportEmail: e.target.value }))}
+            />
+          </Field>
+          <Field label="Support phone">
+            <input
+              className={inputCls}
+              value={settings.supportPhone}
+              onChange={e => setSettings(s => ({ ...s, supportPhone: e.target.value }))}
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
+        <h2 className="font-semibold text-neutral-900">Storefront</h2>
+        <Field label="Announcement bar text (shown at the very top of the store)">
+          <textarea
+            rows={2}
+            className={inputCls}
+            value={settings.announcement}
+            onChange={e => setSettings(s => ({ ...s, announcement: e.target.value }))}
+          />
+        </Field>
+        <Field label="Free delivery threshold (₹)">
+          <input
+            type="number"
+            min={0}
+            className={inputCls}
+            value={settings.freeDeliveryThreshold}
+            onChange={e => setSettings(s => ({ ...s, freeDeliveryThreshold: Number(e.target.value) }))}
+          />
+        </Field>
+      </div>
+
+      <button
+        onClick={save}
+        disabled={saving}
+        className="h-11 px-8 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+      >
+        {saving ? 'Saving...' : 'Save Settings'}
+      </button>
+    </div>
+  );
+}
+
+const inputCls =
+  'w-full h-10 rounded-lg border border-neutral-300 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500';
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-xs font-medium text-neutral-600 mb-1">{label}</label>
+      {children}
     </div>
   );
 }
