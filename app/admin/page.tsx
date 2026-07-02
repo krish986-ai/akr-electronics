@@ -1,128 +1,127 @@
 'use client';
 
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
+import Link from 'next/link';
+import { products, productReviews, productQuestions, coupons } from '@/lib/mock/products';
+
+const LOW_STOCK_THRESHOLD = 100;
 
 export default function AdminDashboard() {
+  const lowStock = products.filter(p => p.stock < LOW_STOCK_THRESHOLD);
+  const pendingReviews = productReviews.filter(r => r.status === 'PENDING');
+  const unansweredQuestions = productQuestions.filter(q => !q.answer);
+  const activeCoupons = coupons.filter(c => c.active);
+  const catalogValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
+
   const stats = [
-    { label: 'Total Sales', value: '₹2,45,000', change: '+12.5%', icon: '💰' },
-    { label: 'Total Orders', value: '342', change: '+5.2%', icon: '📦' },
-    { label: 'Total Products', value: '1,245', change: '+3.1%', icon: '📊' },
-    { label: 'Total Customers', value: '5,432', change: '+8.7%', icon: '👥' },
+    { label: 'Products Live', value: String(products.length), sub: `${lowStock.length} low stock`, icon: '📦', href: '/admin/products' },
+    { label: 'Inventory Value', value: `₹${(catalogValue / 100000).toFixed(1)}L`, sub: 'At current prices', icon: '💰', href: '/admin/products' },
+    { label: 'Pending Reviews', value: String(pendingReviews.length), sub: `${unansweredQuestions.length} open questions`, icon: '⭐', href: '/admin/reviews' },
+    { label: 'Active Coupons', value: String(activeCoupons.length), sub: `${coupons.length} total`, icon: '🎟️', href: '/admin/coupons' },
   ];
 
   const recentOrders = [
-    { id: '#2345', customer: 'John Doe', amount: '₹5,000', status: 'Delivered' },
-    { id: '#2344', customer: 'Jane Smith', amount: '₹3,200', status: 'Processing' },
-    { id: '#2343', customer: 'Bob Wilson', amount: '₹7,500', status: 'Pending' },
-    { id: '#2342', customer: 'Alice Brown', amount: '₹2,100', status: 'Delivered' },
+    { id: 'AKR-2026-1042', customer: 'Demo Customer', amount: '₹848', status: 'SHIPPED' },
+    { id: 'AKR-2026-1041', customer: 'Ravi Kumar', amount: '₹2,199', status: 'PROCESSING' },
+    { id: 'AKR-2026-1040', customer: 'Sneha P', amount: '₹549', status: 'DELIVERED' },
+    { id: 'AKR-2026-1039', customer: 'Arjun M', amount: '₹8,499', status: 'CONFIRMED' },
   ];
 
-  const lowStockProducts = [
-    { name: 'Arduino Uno R3', stock: 15, sku: 'ARDUINO-UNO-R3' },
-    { name: 'Servo Motor SG90', stock: 8, sku: 'SG90-SERVO' },
-    { name: 'DHT22 Sensor', stock: 5, sku: 'DHT22-SENSOR' },
-  ];
+  const topProducts = [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 5);
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-white">Dashboard</h1>
-          <p className="text-neutral-400 mt-1">Welcome back, Admin</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">Download Report</Button>
-          <Button variant="primary">Generate Invoice</Button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <p className="text-sm text-neutral-400">Store overview · mock data until backend integration (Phase 17)</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, i) => (
-          <Card key={i} variant="default" className="bg-neutral-800 border-neutral-700">
-            <CardContent className="p-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-neutral-400 text-sm">{stat.label}</p>
-                  <p className="text-2xl font-bold text-white mt-1">{stat.value}</p>
-                  <p className="text-success text-xs mt-2">{stat.change} from last month</p>
-                </div>
-                <div className="text-3xl">{stat.icon}</div>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map(s => (
+          <Link
+            key={s.label}
+            href={s.href}
+            className="bg-neutral-800 border border-neutral-700 rounded-xl p-5 hover:border-primary-500 transition-colors"
+          >
+            <span className="text-2xl">{s.icon}</span>
+            <p className="text-2xl font-bold mt-3">{s.value}</p>
+            <p className="text-sm text-neutral-300">{s.label}</p>
+            <p className="text-xs text-neutral-500 mt-1">{s.sub}</p>
+          </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders */}
-        <Card variant="default" className="lg:col-span-2 bg-neutral-800 border-neutral-700">
-          <CardHeader>
-            <CardTitle className="text-white">Recent Orders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {recentOrders.map((order, i) => (
-                <div key={i} className="flex justify-between items-center p-3 bg-neutral-700 rounded">
-                  <div>
-                    <p className="font-medium text-white">{order.id}</p>
-                    <p className="text-sm text-neutral-400">{order.customer}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-medium text-white">{order.amount}</p>
-                    <Badge variant={order.status === 'Delivered' ? 'success' : order.status === 'Processing' ? 'primary' : 'warning'} size="sm">
-                      {order.status}
-                    </Badge>
-                  </div>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">Recent Orders</h2>
+            <Link href="/admin/orders" className="text-xs text-primary-400 hover:underline">
+              View all →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {recentOrders.map(o => (
+              <div key={o.id} className="flex items-center justify-between py-2 border-b border-neutral-700/50 last:border-0">
+                <div>
+                  <p className="text-sm font-mono">{o.id}</p>
+                  <p className="text-xs text-neutral-500">{o.customer}</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{o.amount}</p>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      o.status === 'DELIVERED'
+                        ? 'bg-emerald-600/20 text-emerald-400'
+                        : o.status === 'SHIPPED'
+                          ? 'bg-blue-600/20 text-blue-400'
+                          : 'bg-amber-600/20 text-amber-400'
+                    }`}
+                  >
+                    {o.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
 
-        {/* Low Stock Alert */}
-        <Card variant="default" className="bg-neutral-800 border-neutral-700">
-          <CardHeader>
-            <CardTitle className="text-white">Low Stock Alert</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {lowStockProducts.map((product, i) => (
-                <div key={i} className="p-2 bg-neutral-700 rounded">
-                  <p className="font-medium text-warning text-sm">{product.name}</p>
-                  <p className="text-xs text-neutral-400">{product.stock} units left</p>
+        <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-semibold">⚠️ Low Stock Alerts</h2>
+            <Link href="/admin/products" className="text-xs text-primary-400 hover:underline">
+              Manage stock →
+            </Link>
+          </div>
+          <div className="space-y-2">
+            {lowStock.map(p => (
+              <div key={p.id} className="flex items-center justify-between py-2 border-b border-neutral-700/50 last:border-0">
+                <div>
+                  <p className="text-sm">{p.name}</p>
+                  <p className="text-xs text-neutral-500 font-mono">{p.sku}</p>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <span className={`text-sm font-bold ${p.stock < 50 ? 'text-red-400' : 'text-amber-400'}`}>
+                  {p.stock} left
+                </span>
+              </div>
+            ))}
+            {lowStock.length === 0 && <p className="text-sm text-neutral-500">All products well stocked ✓</p>}
+          </div>
+        </div>
       </div>
 
-      {/* System Status */}
-      <Card variant="default" className="bg-neutral-800 border-neutral-700">
-        <CardHeader>
-          <CardTitle className="text-white">System Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-neutral-400">Database</span>
-              <Badge variant="success" size="sm">Connected</Badge>
+      <div className="bg-neutral-800 border border-neutral-700 rounded-xl p-5">
+        <h2 className="font-semibold mb-4">🏆 Top Products (by review volume)</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {topProducts.map(p => (
+            <div key={p.id} className="bg-neutral-900 rounded-lg p-3 border border-neutral-700">
+              <p className="text-xs font-medium line-clamp-2">{p.name}</p>
+              <p className="text-sm font-bold mt-1">₹{p.price.toLocaleString('en-IN')}</p>
+              <p className="text-xs text-neutral-500 mt-0.5">
+                ★ {p.rating} · {p.reviews} reviews
+              </p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-400">Payment Gateway</span>
-              <Badge variant="success" size="sm">Active</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-neutral-400">Email Service</span>
-              <Badge variant="success" size="sm">Running</Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

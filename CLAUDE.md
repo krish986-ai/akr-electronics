@@ -129,10 +129,13 @@ Use `react-hook-form` + `zod`:
 
 ## Deployment
 
-Firebase Hosting (setup in Phase 1):
-- GitHub Actions for CI/CD
-- Auto-deploy on push to main
-- Environment variables in GitHub Secrets
+Vercel (Hobby/free tier) — see DEPLOYMENT.md:
+- Git-based auto-deploy on push to main (no GitHub Actions needed)
+- Preview deployments per branch/PR
+- Environment variables in Vercel dashboard
+- Region pinned to bom1 (Mumbai) via vercel.json
+- Serverless constraint: never write to local filesystem at request time —
+  uploads use Firebase Storage in production (LocalStorageProvider is dev-only)
 
 ## Phase Breakdown
 

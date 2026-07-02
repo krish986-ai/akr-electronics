@@ -1,499 +1,132 @@
-# A.K.R Electronics - Deployment Guide
+# A.K.R Electronics - Deployment Guide (Vercel)
 
-**Version**: 1.0.0  
-**Status**: Production Ready  
-**Last Updated**: 2026-06-29
+**Version**: 1.1.0
+**Hosting**: Vercel (Hobby / free tier)
+**Backend**: Firebase (Auth + Firestore + Storage)
+**Last Updated**: 2026-07-02
 
 ---
 
 ## Overview
 
-A.K.R Electronics is optimized for deployment on Firebase Hosting with Firebase Authentication and Firestore (or PostgreSQL backend). This guide covers production deployment steps.
+A.K.R Electronics deploys to **Vercel** as a Next.js app. Firebase provides
+authentication, the Firestore database, and file storage. There is no
+Firebase Hosting — Vercel serves everything (pages, API routes, static assets).
+
+```
+GitHub (main branch)
+    │  push → auto-deploy
+    ▼
+Vercel (bom1 / Mumbai region)
+    ├── Next.js pages + API routes (serverless)
+    └── Static assets (CDN)
+         │
+         ▼
+Firebase (Auth · Firestore · Storage)
+```
 
 ---
 
 ## Pre-Deployment Checklist
 
-- [ ] All environment variables configured in `.env.production`
-- [ ] Database migrations completed
-- [ ] Firebase project created and configured
+- [ ] Build passes locally (`npm run build`)
+- [ ] Type check passes (`npm run type-check`)
+- [ ] Firebase project created (Auth + Firestore + Storage enabled)
+- [ ] Firebase Admin service account key generated
+- [ ] Firestore security rules deployed (via Firebase console or CLI)
+- [ ] All environment variables added in the Vercel dashboard
 - [ ] Admin user account created
-- [ ] Build passes all tests and linting (`npm run build`)
-- [ ] TypeScript compilation without errors (`npm run type-check`)
-- [ ] Sample data loaded (if needed)
-- [ ] Firebase security rules configured
-- [ ] CORS settings configured
-- [ ] CDN/Caching strategy planned
 
 ---
 
-## Firebase Hosting Deployment
+## Step 1: Push to GitHub
 
-### Prerequisites
+Vercel deploys from Git. Make sure the repo is on GitHub with `main` as the
+production branch.
 
-1. **Firebase CLI**:
-   ```bash
-   npm install -g firebase-tools
-   ```
+## Step 2: Import Project in Vercel
 
-2. **Firebase Account**: Create account at https://firebase.google.com
+1. Sign in at https://vercel.com (Hobby plan is free)
+2. **Add New → Project** → import the AKR repository
+3. Framework preset: **Next.js** (auto-detected; `vercel.json` pins it)
+4. Region is pinned to **bom1 (Mumbai)** in `vercel.json` for Indian users
 
-3. **Firebase Project**: Create project in Firebase Console
+## Step 3: Environment Variables
 
-### Step 1: Initialize Firebase
+Add every variable from `.env.example` in
+**Project Settings → Environment Variables** (Production + Preview):
+
+| Variable | Notes |
+|---|---|
+| `NEXT_PUBLIC_FIREBASE_*` (6 vars) | From Firebase Console → Project Settings → Web App |
+| `FIREBASE_ADMIN_PROJECT_ID` | Service account project ID |
+| `FIREBASE_ADMIN_CLIENT_EMAIL` | Service account email |
+| `FIREBASE_ADMIN_PRIVATE_KEY` | Paste full key; keep `\n` escapes — code un-escapes them |
+| `SESSION_SECRET` | 32+ random chars |
+| `SESSION_EXPIRY_MS` | e.g. `2592000000` (30 days) |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_SECRET_KEY` | When payments go live |
+| `NEXT_PUBLIC_APP_URL` | The production URL, e.g. `https://akr.vercel.app` |
+| `NEXT_PUBLIC_APP_NAME` | `A.K.R Electronics` |
+| `ADMIN_EMAIL` | Primary admin account email |
+
+Do **not** set `STORAGE_PROVIDER` on Vercel — the platform sets `VERCEL=1`
+automatically and the app switches uploads to Firebase Storage
+(the serverless filesystem is read-only/ephemeral, so local-disk uploads are
+dev-only).
+
+## Step 4: Deploy
+
+Click **Deploy**. From then on:
+
+- Push to `main` → production deployment
+- Push to any other branch / open a PR → preview deployment with its own URL
+
+No GitHub Actions needed — Vercel's Git integration handles CI/CD.
+
+## Step 5: Custom Domain (optional)
+
+**Project Settings → Domains** → add e.g. `akrelectronics.com`.
+Free tier includes automatic HTTPS certificates.
+
+---
+
+## Free (Hobby) Tier Limits — Design Constraints
+
+| Limit | Value | Impact on AKR |
+|---|---|---|
+| Commercial use | Officially non-commercial | Fine for development/demo; upgrade to Pro (~$20/mo) before real sales |
+| Bandwidth | 100 GB/month | Plenty for early traffic |
+| Serverless function duration | 10s default | Keep API routes fast; no long-running jobs |
+| Image optimization | 1,000 source images/month | Product images count; use S3/Firebase Storage URLs with caching |
+| Cron jobs | 2, daily granularity only | No frequent background jobs — use Firebase functions if needed |
+| Deployments | 100/day | Not a concern |
+
+**Key rule for code**: never write to the filesystem at request time
+(uploads, logs, caches). Use Firebase Storage / Firestore instead.
+
+---
+
+## Local Development
 
 ```bash
-firebase login
-firebase init hosting
-```
-
-When prompted:
-- Select your Firebase project
-- Set public directory to: `.next`
-- Configure as SPA: Select "No"
-- Set GitHub deploys: Optional
-
-### Step 2: Configure Production Environment
-
-Create `.env.production.local`:
-
-```env
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-DATABASE_URL=your-production-database-url
-FIREBASE_ADMIN_PRIVATE_KEY=your-firebase-private-key
-# ... other production variables
-```
-
-### Step 3: Build for Production
-
-```bash
-npm run build
-```
-
-Ensure no errors in output.
-
-### Step 4: Deploy
-
-```bash
-firebase deploy
-```
-
-Or with specific targets:
-
-```bash
-firebase deploy --only hosting
-```
-
-### Step 5: Verify Deployment
-
-1. Check Firebase Console for deployment status
-2. Visit your live URL
-3. Test core functionality
-4. Monitor error logs
-
----
-
-## Docker Deployment
-
-### Dockerfile
-
-Create `Dockerfile`:
-
-```dockerfile
-FROM node:20-alpine
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy application
-COPY . .
-
-# Build application
-RUN npm run build
-
-# Expose port
-EXPOSE 3000
-
-# Start application
-CMD ["npm", "start"]
-```
-
-### Docker Compose
-
-Create `docker-compose.yml`:
-
-```yaml
-version: '3.8'
-
-services:
-  app:
-    build: .
-    ports:
-      - "3000:3000"
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: postgresql://user:password@postgres:5432/akr
-      FIREBASE_ADMIN_PROJECT_ID: your-project
-    depends_on:
-      - postgres
-
-  postgres:
-    image: postgres:15
-    environment:
-      POSTGRES_DB: akr
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
-### Build and Run
-
-```bash
-docker-compose up -d
-```
-
----
-
-## Environment Variables for Production
-
-### Database
-
-```env
-# PostgreSQL (with connection pooling recommended)
-DATABASE_URL="postgresql://user:password@prod-db.example.com:5432/akr_electronics?pool=10"
-```
-
-### Firebase
-
-```env
-FIREBASE_ADMIN_PROJECT_ID=your-production-project-id
-FIREBASE_ADMIN_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
-FIREBASE_ADMIN_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n
-```
-
-### Security
-
-```env
-SESSION_SECRET=your-secure-random-key-min-32-chars
-SESSION_EXPIRY_MS=2592000000
-```
-
-### Application
-
-```env
-NODE_ENV=production
-NEXT_PUBLIC_APP_NAME=A.K.R Electronics
-NEXT_PUBLIC_APP_URL=https://akr-electronics.com
-ADMIN_EMAIL=admin@akr-electronics.com
-```
-
----
-
-## Firestore Security Rules
-
-Create/update `firestore.rules`:
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users collection - Only own documents
-    match /users/{userId} {
-      allow read, write: if request.auth.uid == userId;
-      allow read: if hasRole('ADMIN');
-    }
-
-    // Products - Public read, Admin write
-    match /products/{productId} {
-      allow read: if resource.data.visibility == 'PUBLIC';
-      allow write: if hasRole('ADMIN');
-    }
-
-    // Orders - User owns or Admin
-    match /orders/{orderId} {
-      allow read, write: if request.auth.uid == resource.data.userId || hasRole('ADMIN');
-      allow create: if request.auth != null;
-    }
-
-    // Helper function
-    function hasRole(role) {
-      return request.auth != null && 
-             request.auth.token.customClaims.role == role;
-    }
-  }
-}
-```
-
-Deploy rules:
-
-```bash
-firebase deploy --only firestore:rules
-```
-
----
-
-## Performance Optimization
-
-### Image Optimization
-
-- Use Next.js Image component for automatic optimization
-- Configure image domains in `next.config.ts`
-- Use WebP format with fallbacks
-
-### Caching Strategy
-
-```typescript
-// In next.config.ts
-headers: async () => {
-  return [
-    {
-      source: '/api/(.*)',
-      headers: [
-        { key: 'Cache-Control', value: 'public, max-age=3600' },
-      ],
-    },
-    {
-      source: '/_next/static/(.*)',
-      headers: [
-        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-      ],
-    },
-  ];
-}
-```
-
-### Database Optimization
-
-- Enable query indexing in PostgreSQL
-- Use connection pooling
-- Implement caching layer (Redis)
-- Regular VACUUM and ANALYZE
-
----
-
-## Monitoring & Logging
-
-### Firebase Console
-
-Monitor in Firebase Console:
-- Cloud Functions logs
-- Authentication metrics
-- Firestore usage
-- Performance monitoring
-
-### Application Logging
-
-Implement logging:
-
-```typescript
-// Example: Log important events
-async function logEvent(event: string, data: any) {
-  console.log(`[${new Date().toISOString()}] ${event}`, data);
-  // Send to logging service (Sentry, LogRocket, etc.)
-}
-```
-
-### Error Tracking
-
-Set up error tracking:
-
-```typescript
-// Example with Sentry
-import * as Sentry from "@sentry/nextjs";
-
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  environment: process.env.NODE_ENV,
-  tracesSampleRate: 0.1,
-});
-```
-
----
-
-## SSL/HTTPS
-
-- Firebase Hosting provides automatic SSL
-- Custom domains configured in Firebase Console
-- DNS records point to Firebase servers
-
-### Custom Domain Setup
-
-1. In Firebase Console → Hosting
-2. Click "Add custom domain"
-3. Follow DNS verification steps
-4. Configure DNS records as shown
-5. Automatic SSL provisioning (typically within 24 hours)
-
----
-
-## Backup & Recovery
-
-### Database Backups
-
-#### PostgreSQL
-
-```bash
-# Full backup
-pg_dump dbname > backup.sql
-
-# Restore
-psql dbname < backup.sql
-
-# Automated backup (cron)
-0 2 * * * pg_dump mydb > /backups/$(date +\%Y-\%m-\%d).sql
-```
-
-#### Firestore
-
-- Enable automatic backups in Firebase Console
-- Configure retention policy
-- Test restore procedures
-
----
-
-## CI/CD Pipeline
-
-### GitHub Actions
-
-Create `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy to Production
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Build
-        run: npm run build
-
-      - name: Deploy to Firebase
-        run: npx firebase-tools deploy
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-```
-
----
-
-## Rollback Procedure
-
-### Firebase Hosting
-
-1. In Firebase Console → Hosting
-2. Click "Deployments" tab
-3. Select previous version
-4. Click "Promote to Live"
-
-### Database
-
-For failed migrations:
-
-```bash
-# Rollback to previous migration
-npx prisma migrate resolve --rolled-back <migration-name>
-```
-
----
-
-## Health Checks
-
-Create health check endpoint:
-
-```typescript
-// app/api/health/route.ts
-export async function GET() {
-  const checks = {
-    database: await checkDatabase(),
-    firebase: await checkFirebase(),
-    timestamp: new Date().toISOString(),
-  };
-
-  return Response.json(checks);
-}
-```
-
-Monitor with:
-```bash
-curl https://your-domain.com/api/health
-```
-
----
-
-## Troubleshooting
-
-### Deployment Issues
-
-**Firebase Login Required**:
-```bash
-firebase logout
-firebase login
-```
-
-**Build Failures**:
-```bash
-npm cache clean --force
-rm -rf node_modules .next
+cp .env.example .env.local   # fill in Firebase dev credentials
 npm install
-npm run build
+npm run dev                  # http://localhost:3000
 ```
 
-**Firebase Deploy Errors**:
-```bash
-firebase deploy --debug
-# Check detailed error messages
-```
+Uploads land in `public/uploads/` locally (LocalStorageProvider).
 
 ---
 
-## Scaling Considerations
+## Rollbacks
 
-- **Database**: Use connection pooling
-- **Storage**: Configure CDN
-- **API**: Implement rate limiting
-- **Frontend**: Use code splitting and lazy loading
-- **Caching**: Redis for frequently accessed data
+Vercel keeps every deployment immutable. To roll back:
+**Deployments → (previous deployment) → Promote to Production** — instant.
 
 ---
 
-## Support
+## Monitoring
 
-For deployment issues:
-1. Check Firebase Console logs
-2. Review `INSTALLATION.md`
-3. Check deployment script output
-4. Enable debug logging with `--debug` flag
-
----
-
-**Deployment Guide Version**: 1.0.0  
-**Last Updated**: 2026-06-29
+- **Vercel dashboard**: request logs, function errors, analytics (basic on free tier)
+- **Firebase console**: Firestore usage, Auth sign-ins, Storage bandwidth
+- Watch Firebase free-tier (Spark) quotas: 50k Firestore reads/day, 1 GB storage

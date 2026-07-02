@@ -1,11 +1,21 @@
 import { IStorageProvider, StorageFile, UploadOptions, StorageCategory } from './types';
 import { LocalStorageProvider } from './local-storage';
+import { FirebaseStorageProvider } from './firebase-storage';
+
+// Vercel's serverless filesystem is read-only and ephemeral, so local disk
+// storage only works in development. Firebase Storage is used when deployed
+// or when explicitly enabled via STORAGE_PROVIDER=firebase.
+function createDefaultProvider(): IStorageProvider {
+  const useFirebase =
+    process.env.STORAGE_PROVIDER === 'firebase' || process.env.VERCEL === '1';
+  return useFirebase ? new FirebaseStorageProvider() : new LocalStorageProvider();
+}
 
 class StorageService {
   private provider: IStorageProvider;
 
   constructor(provider?: IStorageProvider) {
-    this.provider = provider || new LocalStorageProvider();
+    this.provider = provider || createDefaultProvider();
   }
 
   setProvider(provider: IStorageProvider): void {

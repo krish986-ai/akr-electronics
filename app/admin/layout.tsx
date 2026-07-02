@@ -8,18 +8,15 @@ import { Avatar } from '@/components/ui/Avatar';
 
 const sidebarItems = [
   { icon: '📊', label: 'Dashboard', href: '/admin', id: 'dashboard' },
+  { icon: '📋', label: 'Orders', href: '/admin/orders', id: 'orders' },
   { icon: '📦', label: 'Products', href: '/admin/products', id: 'products' },
   { icon: '🏷️', label: 'Categories', href: '/admin/categories', id: 'categories' },
   { icon: '🏢', label: 'Brands', href: '/admin/brands', id: 'brands' },
-  { icon: '🎁', label: 'IoT Kits', href: '/admin/kits', id: 'kits' },
-  { icon: '📋', label: 'Orders', href: '/admin/orders', id: 'orders' },
-  { icon: '👥', label: 'Customers', href: '/admin/customers', id: 'customers' },
-  { icon: '📦', label: 'Inventory', href: '/admin/inventory', id: 'inventory' },
+  { icon: '🖼️', label: 'Banners', href: '/admin/banners', id: 'banners' },
   { icon: '🎟️', label: 'Coupons', href: '/admin/coupons', id: 'coupons' },
-  { icon: '🚚', label: 'Shipping', href: '/admin/shipping', id: 'shipping' },
-  { icon: '🏠', label: 'Homepage', href: '/admin/homepage', id: 'homepage' },
+  { icon: '👥', label: 'Customers', href: '/admin/customers', id: 'customers' },
+  { icon: '⭐', label: 'Reviews & QnA', href: '/admin/reviews', id: 'reviews' },
   { icon: '⚙️', label: 'Settings', href: '/admin/settings', id: 'settings' },
-  { icon: '📊', label: 'Analytics', href: '/admin/analytics', id: 'analytics' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
