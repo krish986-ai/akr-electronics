@@ -1,46 +1,71 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ProductService } from '@/lib/services/product-service';
-import { createProductSchema, productFilterSchema } from '@/lib/validation/product-validation';
 import { z } from 'zod';
+import { getAdminDb } from '@/lib/firebase/admin';
+import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { STANDARD_WARRANTY, GST_RATE_DEFAULT } from '@/lib/mock/products';
 
-export async function GET(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const filters = {
-      search: searchParams.get('search') || undefined,
-      categoryId: searchParams.get('categoryId') || undefined,
-      brandId: searchParams.get('brandId') || undefined,
-      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
-      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : undefined,
-      status: (searchParams.get('status') as any) || undefined,
-      page: Number(searchParams.get('page') || 1),
-      limit: Number(searchParams.get('limit') || 20),
-      sortBy: (searchParams.get('sortBy') as any) || 'createdAt',
-      sortOrder: (searchParams.get('sortOrder') as any) || 'desc',
-    };
+const productInputSchema = z.object({
+  name: z.string().min(2).max(200),
+  slug: z.string().min(2).max(200).regex(/^[a-z0-9-]+$/),
+  sku: z.string().min(2).max(50),
+  image: z.string().url(),
+  price: z.number().positive(),
+  originalPrice: z.number().positive().optional(),
+  gstRate: z.number().min(0).max(28).default(GST_RATE_DEFAULT),
+  category: z.string().min(1),
+  categorySlug: z.string().min(1),
+  brand: z.string().min(1),
+  brandSlug: z.string().min(1),
+  description: z.string().min(10).max(5000),
+  specifications: z.record(z.string()).default({}),
+  features: z.array(z.string()).default([]),
+  packageIncludes: z.array(z.string()).optional(),
+  warrantyDays: z.number().int().min(0).default(STANDARD_WARRANTY.days),
+  countryOfOrigin: z.string().min(2),
+  stock: z.number().int().min(0),
+  isNew: z.boolean().optional(),
+  isBestseller: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+});
 
-    const validated = productFilterSchema.parse(filters);
-    const result = await ProductService.listProducts(validated);
+export type ProductInput = z.infer<typeof productInputSchema>;
 
-    return NextResponse.json(result);
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
-    }
-    return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
-  }
+export function toProductDocument(input: ProductInput) {
+  const { warrantyDays, ...rest } = input;
+  return {
+    ...rest,
+    warranty: { ...STANDARD_WARRANTY, days: warrantyDays },
+    rating: 0,
+    reviews: 0,
+  };
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const body = await req.json();
-    const validated = createProductSchema.parse(body);
-    const product = await ProductService.createProduct(validated);
+export async function POST(request: NextRequest) {
+  const check = await verifyAdminRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
 
-    return NextResponse.json(product, { status: 201 });
+  try {
+    const body = await request.json();
+    const input = productInputSchema.parse(body);
+    const db = getAdminDb();
+
+    const existing = await db.collection('products').where('slug', '==', input.slug).limit(1).get();
+    if (!existing.empty) {
+      return NextResponse.json({ error: 'A product with this slug already exists' }, { status: 409 });
+    }
+
+    const ref = db.collection('products').doc();
+    await ref.set({ id: ref.id, ...toProductDocument(input) });
+
+    return NextResponse.json({ success: true, id: ref.id }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') },
+        { status: 400 }
+      );
     }
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
   }

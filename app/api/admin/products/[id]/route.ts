@@ -1,49 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ProductService } from '@/lib/services/product-service';
-import { updateProductSchema } from '@/lib/validation/product-validation';
 import { z } from 'zod';
+import { getAdminDb } from '@/lib/firebase/admin';
+import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { STANDARD_WARRANTY } from '@/lib/mock/products';
 
-export async function GET(
-  _req: NextRequest,
-  props: { params: Promise<{ id: string }> }
-) {
-  const { id } = await props.params;
-  try {
-    const product = await ProductService.getProductById(id);
-    if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
-    return NextResponse.json(product);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch product' }, { status: 500 });
+const productUpdateSchema = z.object({
+  name: z.string().min(2).max(200).optional(),
+  slug: z.string().min(2).max(200).regex(/^[a-z0-9-]+$/).optional(),
+  sku: z.string().min(2).max(50).optional(),
+  image: z.string().url().optional(),
+  price: z.number().positive().optional(),
+  originalPrice: z.number().positive().nullable().optional(),
+  gstRate: z.number().min(0).max(28).optional(),
+  category: z.string().min(1).optional(),
+  categorySlug: z.string().min(1).optional(),
+  brand: z.string().min(1).optional(),
+  brandSlug: z.string().min(1).optional(),
+  description: z.string().min(10).max(5000).optional(),
+  specifications: z.record(z.string()).optional(),
+  features: z.array(z.string()).optional(),
+  packageIncludes: z.array(z.string()).optional(),
+  warrantyDays: z.number().int().min(0).optional(),
+  countryOfOrigin: z.string().min(2).optional(),
+  stock: z.number().int().min(0).optional(),
+  isNew: z.boolean().optional(),
+  isBestseller: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+});
+
+export async function PUT(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const check = await verifyAdminRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
   }
-}
 
-export async function PUT(
-  req: NextRequest,
-  props: { params: Promise<{ id: string }> }
-) {
   const { id } = await props.params;
   try {
-    const body = await req.json();
-    const validated = updateProductSchema.parse(body);
-    const product = await ProductService.updateProduct(id, validated);
-    return NextResponse.json(product);
+    const body = await request.json();
+    const input = productUpdateSchema.parse(body);
+    const db = getAdminDb();
+
+    const ref = db.collection('products').doc(id);
+    const doc = await ref.get();
+    if (!doc.exists) {
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+
+    const { warrantyDays, originalPrice, ...rest } = input;
+    const update: Record<string, unknown> = { ...rest };
+    if (warrantyDays !== undefined) {
+      update.warranty = { ...STANDARD_WARRANTY, ...(doc.data()?.warranty ?? {}), days: warrantyDays };
+    }
+    if (originalPrice !== undefined) {
+      update.originalPrice = originalPrice;
+    }
+
+    await ref.update(update);
+    return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Validation error', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') },
+        { status: 400 }
+      );
     }
     return NextResponse.json({ error: 'Failed to update product' }, { status: 500 });
   }
 }
 
-export async function DELETE(
-  _req: NextRequest,
-  props: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const check = await verifyAdminRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
   const { id } = await props.params;
   try {
-    await ProductService.deleteProduct(id);
-    return NextResponse.json({ message: 'Product deleted' });
-  } catch (error) {
+    await getAdminDb().collection('products').doc(id).delete();
+    return NextResponse.json({ success: true });
+  } catch {
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
   }
 }

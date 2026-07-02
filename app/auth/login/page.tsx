@@ -32,7 +32,8 @@ export default function LoginPage() {
       setIsLoading(true);
       setError(null);
       await login(data.email, data.password);
-      router.push('/');
+      const next = new URLSearchParams(window.location.search).get('next');
+      router.push(next && next.startsWith('/') ? next : '/');
     } catch (err) {
       setError(friendlyAuthError(err));
     } finally {

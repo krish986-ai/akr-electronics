@@ -4,9 +4,15 @@ import {
   products as mockProducts,
   brands as mockBrands,
   categoryTree as mockCategoryTree,
+  coupons as mockCoupons,
+  productReviews as mockReviews,
+  productQuestions as mockQuestions,
   Product,
   Brand,
   CategoryNode,
+  Coupon,
+  ProductReview,
+  ProductQuestion,
 } from '@/lib/mock/products';
 
 // Single data-access point for the storefront. Reads Firestore when Firebase
@@ -54,6 +60,25 @@ export async function getBrands(): Promise<Brand[]> {
 
 export async function getCategories(): Promise<CategoryNode[]> {
   return fromCollection<CategoryNode>('categories', mockCategoryTree);
+}
+
+export async function getCoupons(): Promise<Coupon[]> {
+  if (!isFirebaseConfigured || !db) return mockCoupons;
+  try {
+    const snapshot = await getDocs(collection(db, 'coupons'));
+    if (snapshot.empty) return mockCoupons;
+    return snapshot.docs.map(d => ({ code: d.id, ...d.data() }) as Coupon);
+  } catch {
+    return mockCoupons;
+  }
+}
+
+export async function getReviews(): Promise<ProductReview[]> {
+  return fromCollection<ProductReview>('reviews', mockReviews);
+}
+
+export async function getQuestions(): Promise<ProductQuestion[]> {
+  return fromCollection<ProductQuestion>('questions', mockQuestions);
 }
 
 export function isLiveData(): boolean {

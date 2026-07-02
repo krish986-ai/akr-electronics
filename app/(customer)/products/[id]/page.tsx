@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  productReviews,
-  productQuestions,
   estimateDelivery,
   FREE_DELIVERY_THRESHOLD,
   Product,
+  ProductReview,
+  ProductQuestion,
 } from '@/lib/mock/products';
-import { getProduct, getProducts } from '@/lib/data/catalog';
+import { getProduct, getProducts, getReviews, getQuestions } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { useCartStore } from '@/lib/stores/cart';
 import { useWishlistStore } from '@/lib/stores/wishlist';
@@ -24,6 +24,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const [product, setProduct] = useState<Product | null | undefined>(undefined);
   const [related, setRelated] = useState<Product[]>([]);
+  const [allReviews, setAllReviews] = useState<ProductReview[]>([]);
+  const [allQuestions, setAllQuestions] = useState<ProductQuestion[]>([]);
   const [tab, setTab] = useState<Tab>('Description');
   const [quantity, setQuantity] = useState(1);
   const [pincode, setPincode] = useState('');
@@ -40,11 +42,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
       if (cancelled) return;
       setProduct(found ?? null);
       if (found) {
-        const all = await getProducts();
+        const [all, revs, ques] = await Promise.all([getProducts(), getReviews(), getQuestions()]);
         if (!cancelled) {
           setRelated(
             all.filter(p => p.categorySlug === found.categorySlug && p.id !== found.id).slice(0, 4)
           );
+          setAllReviews(revs);
+          setAllQuestions(ques);
         }
       }
     });
@@ -54,10 +58,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   }, [id]);
 
   const reviews = useMemo(
-    () => productReviews.filter(r => r.productId === product?.id && r.status === 'APPROVED'),
-    [product]
+    () => allReviews.filter(r => r.productId === product?.id && r.status === 'APPROVED'),
+    [allReviews, product]
   );
-  const questions = useMemo(() => productQuestions.filter(q => q.productId === product?.id), [product]);
+  const questions = useMemo(
+    () => allQuestions.filter(q => q.productId === product?.id),
+    [allQuestions, product]
+  );
 
   if (product === undefined) {
     return (

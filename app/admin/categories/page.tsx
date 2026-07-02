@@ -19,9 +19,7 @@ export default function AdminCategoriesPage() {
           <h1 className="text-2xl font-bold">Categories</h1>
           <p className="text-sm text-neutral-500">Hierarchical category tree · {categoryTree.length} top-level</p>
         </div>
-        <button className="px-4 h-10 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
-          + Add Category
-        </button>
+        <p className="text-xs text-neutral-400">Category editing arrives with the next admin update</p>
       </div>
 
       <div className="bg-white border border-neutral-200 rounded-xl divide-y divide-neutral-200">
@@ -42,7 +40,6 @@ export default function AdminCategoriesPage() {
               </div>
               <span className="text-xs text-neutral-500">{countProducts(cat)} products</span>
               <span className="text-xs text-neutral-500">{cat.children?.length ?? 0} subcategories</span>
-              <button className="text-xs text-primary-600 hover:underline">Edit</button>
             </div>
             {expanded.includes(cat.id) &&
               cat.children?.map(sub => (
@@ -52,7 +49,6 @@ export default function AdminCategoriesPage() {
                     <p className="text-sm">{sub.name}</p>
                     <p className="text-xs text-neutral-500">/{sub.slug}</p>
                   </div>
-                  <button className="text-xs text-primary-600 hover:underline">Edit</button>
                 </div>
               ))}
           </div>

@@ -10,9 +10,7 @@ export default function AdminBrandsPage() {
           <h1 className="text-2xl font-bold">Brands</h1>
           <p className="text-sm text-neutral-500">{brands.length} brands in catalog</p>
         </div>
-        <button className="px-4 h-10 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
-          + Add Brand
-        </button>
+        <p className="text-xs text-neutral-400">Brand editing arrives with the next admin update</p>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -32,7 +30,6 @@ export default function AdminBrandsPage() {
               <p className="text-xs text-neutral-500 mt-3">{brand.description}</p>
               <div className="flex items-center justify-between mt-4">
                 <span className="text-xs text-neutral-500">{count} products</span>
-                <button className="text-xs text-primary-600 hover:underline">Edit</button>
               </div>
             </div>
           );

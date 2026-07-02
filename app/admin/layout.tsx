@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
+import { AdminGuard } from '@/components/admin/AdminGuard';
 
 const sidebarItems = [
   { icon: '📊', label: 'Dashboard', href: '/admin', id: 'dashboard' },
@@ -27,6 +28,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
 
   return (
+    <AdminGuard>
     <div className="flex h-screen bg-neutral-100 text-neutral-900">
       <aside
         className={cn(
@@ -110,5 +112,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <main className="flex-1 overflow-auto p-6">{children}</main>
       </div>
     </div>
+    </AdminGuard>
   );
 }
