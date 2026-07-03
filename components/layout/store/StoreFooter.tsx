@@ -82,10 +82,12 @@ export function StoreFooter() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 md:grid-cols-6 gap-8">
         <div className="col-span-2">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="w-9 h-9 rounded-lg bg-primary-600 text-white font-bold grid place-items-center">A</span>
-            <span className="font-bold text-white">A.K.R Electronics</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/logo-full.png"
+            alt="A.K.R Electronics"
+            className="w-44 h-auto rounded-xl mb-4"
+          />
           <p className="text-sm text-neutral-400 mb-4">
             Premium IoT components and kits for India&apos;s makers, students and startups.
           </p>

@@ -36,10 +36,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           sidebarOpen ? 'w-64' : 'w-20'
         )}
       >
-        <div className="p-4 border-b border-neutral-200 flex items-center gap-2">
-          <span className="w-9 h-9 rounded-lg bg-primary-600 text-white font-bold grid place-items-center shrink-0">
-            A
-          </span>
+        <div className="p-4 border-b border-neutral-200 flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={sidebarOpen ? '/images/logo-mark.png' : '/images/logo-icon.png'}
+            alt="A.K.R Electronics"
+            className="h-9 w-auto rounded-lg shadow-sm shrink-0"
+          />
           {sidebarOpen && (
             <div>
               <p className="font-bold text-neutral-900 leading-tight">A.K.R Admin</p>

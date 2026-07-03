@@ -39,10 +39,13 @@ export function StoreHeader() {
             ☰
           </button>
 
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <span className="w-9 h-9 rounded-lg bg-primary-600 text-white font-bold grid place-items-center">
-              A
-            </span>
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/logo-mark.png"
+              alt="A.K.R Electronics"
+              className="h-9 w-auto rounded-lg shadow-sm"
+            />
             <span className="hidden sm:block">
               <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
               <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
