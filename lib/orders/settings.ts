@@ -3,6 +3,7 @@ export interface OrderSettings {
   lowOrderCharge: number;
   fastDeliveryCharge: number;
   fastDeliveryEnabled: boolean;
+  codEnabled: boolean;
 }
 
 export const defaultOrderSettings: OrderSettings = {
@@ -10,4 +11,5 @@ export const defaultOrderSettings: OrderSettings = {
   lowOrderCharge: 0,
   fastDeliveryCharge: 100,
   fastDeliveryEnabled: true,
+  codEnabled: true,
 };

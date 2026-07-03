@@ -177,7 +177,7 @@ function OrderSettingsPanel({ onError }: { onError: (message: string) => void })
       {loading ? (
         <p className="text-sm text-neutral-500">Loading settings...</p>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
             <label className="block text-xs font-medium text-neutral-700 mb-1">
               Minimum order amount (₹)
@@ -245,6 +245,25 @@ function OrderSettingsPanel({ onError }: { onError: (message: string) => void })
               Turn off to hide fast delivery at checkout
             </p>
           </div>
+
+          <div>
+            <label className="block text-xs font-medium text-neutral-700 mb-1">
+              Cash on Delivery
+            </label>
+            <button
+              onClick={() => setSettings(prev => ({ ...prev, codEnabled: !prev.codEnabled }))}
+              className={`h-10 w-full rounded-lg text-sm font-semibold border transition-colors ${
+                settings.codEnabled
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'bg-neutral-100 border-neutral-300 text-neutral-500'
+              }`}
+            >
+              {settings.codEnabled ? '● Accepting' : '○ Not accepting'}
+            </button>
+            <p className="text-[11px] text-neutral-500 mt-1">
+              Turn off to stop taking COD orders
+            </p>
+          </div>
         </div>
       )}
     </div>
@@ -285,6 +304,9 @@ function AdminOrderCard({
           <p className="text-xs text-neutral-500">{order.address.email}</p>
         </div>
         <p className="font-bold text-neutral-900">₹{order.total.toLocaleString('en-IN')}</p>
+        <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
+          {order.paymentMethod === 'Cash on Delivery' ? '💵 COD' : order.paymentMethod}
+        </span>
         <span
           className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${STATUS_BADGE_CLASSES[order.status] ?? 'bg-neutral-100 text-neutral-600'}`}
         >
@@ -374,6 +396,10 @@ function AdminOrderCard({
               <span className="font-medium text-neutral-700">
                 {order.shippingMethod === 'express' ? 'Fast (1-2 days)' : 'Standard (3-5 days)'}
               </span>
+            </p>
+            <p className="text-xs text-neutral-500 mt-1">
+              Payment method:{' '}
+              <span className="font-medium text-neutral-700">{order.paymentMethod}</span>
             </p>
           </div>
         </div>

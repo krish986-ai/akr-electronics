@@ -9,6 +9,7 @@ const orderSettingsSchema = z.object({
   lowOrderCharge: z.number().min(0),
   fastDeliveryCharge: z.number().min(0),
   fastDeliveryEnabled: z.boolean(),
+  codEnabled: z.boolean(),
 });
 
 export async function GET(request: NextRequest) {

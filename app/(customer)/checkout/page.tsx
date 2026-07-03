@@ -51,7 +51,12 @@ export default function CheckoutPage() {
 
   const [settings, setSettings] = useState<OrderSettings>(defaultOrderSettings);
   useEffect(() => {
-    fetchOrderSettings().then(setSettings);
+    fetchOrderSettings().then(loaded => {
+      setSettings(loaded);
+      if (!loaded.codEnabled) {
+        setPaymentMethod('upi');
+      }
+    });
   }, []);
 
   const [shippingMethod, setShippingMethod] = useState('standard');
@@ -375,16 +380,22 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {!settings.codEnabled && (
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
+                    Cash on Delivery is temporarily unavailable — we are not accepting COD orders
+                    right now. Please check back later.
+                  </p>
+                )}
                 <RadioGroup
                   options={[
-                    { value: 'cod', label: '💵 Cash on Delivery' },
+                    ...(settings.codEnabled ? [{ value: 'cod', label: '💵 Cash on Delivery' }] : []),
                     { value: 'upi', label: 'UPI (available after payment integration)' },
                     { value: 'card', label: 'Credit/Debit Card (available after payment integration)' },
                   ]}
                   value={paymentMethod}
                   onChange={setPaymentMethod}
                 />
-                {paymentMethod !== 'cod' && (
+                {settings.codEnabled && paymentMethod !== 'cod' && (
                   <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-3">
                     Online payments arrive with Razorpay integration (Phase 18). Use Cash on Delivery for now.
                   </p>
@@ -400,7 +411,7 @@ export default function CheckoutPage() {
                   size="lg"
                   fullWidth
                   className="mt-6"
-                  disabled={paymentMethod !== 'cod' || isPlacing}
+                  disabled={paymentMethod !== 'cod' || !settings.codEnabled || isPlacing}
                   onClick={placeOrder}
                 >
                   {isPlacing ? 'Placing Order...' : `Place Order - ₹${total.toLocaleString('en-IN')}`}
