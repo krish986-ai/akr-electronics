@@ -1,7 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+  updateProfile,
+} from 'firebase/auth';
 import { cn } from '@/lib/utils/cn';
+import { useAuth } from '@/lib/auth/client';
+import { fetchUserProfile, saveUserProfile } from '@/lib/auth/profile';
+import { profileUpdateSchema } from '@/lib/auth/validation';
+import { friendlyAuthError } from '@/lib/auth/errors';
+import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
@@ -10,24 +22,60 @@ import { Alert } from '@/components/ui/Alert';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
+interface ProfileForm {
+  name: string;
+  phone: string;
+  branch: string;
+  college: string;
+}
+
+const emptyForm: ProfileForm = { name: '', phone: '', branch: '', college: '' };
+
 export default function ProfilePage() {
+  const { user, isLoading } = useAuth();
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [savedProfile, setSavedProfile] = useState<ProfileForm>(emptyForm);
+  const [formData, setFormData] = useState<ProfileForm>(emptyForm);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-
-  const [formData, setFormData] = useState({
-    name: 'John Doe',
-    email: 'john@example.com',
-    phone: '+91 9876543210',
-    country: 'India',
-    city: 'Bangalore',
-  });
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [newPassword, setNewPassword] = useState({
     current: '',
     new: '',
     confirm: '',
   });
+  const [passwordError, setPasswordError] = useState('');
+
+  useEffect(() => {
+    if (!user) {
+      setProfileLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const profile = await fetchUserProfile(user.id);
+        if (cancelled) return;
+        const loaded: ProfileForm = {
+          name: profile?.name || user.name,
+          phone: profile?.phone ?? '',
+          branch: profile?.branch ?? '',
+          college: profile?.college ?? '',
+        };
+        setSavedProfile(loaded);
+        setFormData(loaded);
+        setEmail(profile?.email || user.email);
+      } finally {
+        if (!cancelled) setProfileLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const handleProfileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -35,39 +83,87 @@ export default function ProfilePage() {
   };
 
   const handleProfileSave = async () => {
+    if (!user) return;
+    const parsed = profileUpdateSchema.safeParse(formData);
+    if (!parsed.success) {
+      setErrorMessage(parsed.error.issues[0]?.message ?? 'Please check the form');
+      return;
+    }
     setIsSaving(true);
+    setErrorMessage('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await saveUserProfile(user.id, parsed.data);
+      if (isFirebaseConfigured && auth?.currentUser) {
+        await updateProfile(auth.currentUser, { displayName: parsed.data.name });
+      }
+      setSavedProfile(parsed.data);
       setSuccessMessage('Profile updated successfully');
       setIsEditing(false);
       setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setErrorMessage(friendlyAuthError(err));
     } finally {
       setIsSaving(false);
     }
   };
 
   const handlePasswordChange = async () => {
+    if (newPassword.new.length < 8) {
+      setPasswordError('New password must be at least 8 characters');
+      return;
+    }
     if (newPassword.new !== newPassword.confirm) {
-      alert('Passwords do not match');
+      setPasswordError('Passwords do not match');
       return;
     }
 
     setIsSaving(true);
+    setPasswordError('');
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (isFirebaseConfigured && auth?.currentUser?.email) {
+        const credential = EmailAuthProvider.credential(auth.currentUser.email, newPassword.current);
+        await reauthenticateWithCredential(auth.currentUser, credential);
+        await updatePassword(auth.currentUser, newPassword.new);
+      }
       setSuccessMessage('Password changed successfully');
       setNewPassword({ current: '', new: '', confirm: '' });
       setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (err) {
+      setPasswordError(friendlyAuthError(err));
     } finally {
       setIsSaving(false);
     }
   };
 
+  if (isLoading || profileLoading) {
+    return (
+      <div className={cn(container, 'py-20 text-center')}>
+        <p className="text-sm text-neutral-500">Loading your profile...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className={cn(container, 'py-20 max-w-md text-center')}>
+        <p className="text-5xl mb-4">🔒</p>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-2">Sign in required</h1>
+        <p className="text-sm text-neutral-500 mb-6">Sign in to view and manage your profile.</p>
+        <Link
+          href="/auth/login"
+          className="inline-block bg-primary-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-700"
+        >
+          Sign In
+        </Link>
+      </div>
+    );
+  }
+
   const profileContent = (
     <Card>
       <CardHeader>
         <CardTitle>Personal Information</CardTitle>
-        <CardDescription>Update your profile details</CardDescription>
+        <CardDescription>Update your student profile details</CardDescription>
       </CardHeader>
       <CardContent>
         {isEditing ? (
@@ -84,42 +180,37 @@ export default function ProfilePage() {
 
             <div>
               <label className="block text-sm font-medium mb-2 text-neutral-900">Email</label>
-              <Input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleProfileChange}
-                placeholder="Enter your email"
-              />
+              <Input value={email} disabled />
+              <p className="text-xs text-neutral-500 mt-1">Email cannot be changed</p>
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2 text-neutral-900">Phone</label>
+              <label className="block text-sm font-medium mb-2 text-neutral-900">Mobile Number</label>
               <Input
                 name="phone"
                 value={formData.phone}
                 onChange={handleProfileChange}
-                placeholder="Enter your phone number"
+                placeholder="9876543210"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2 text-neutral-900">City</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-900">Branch</label>
                 <Input
-                  name="city"
-                  value={formData.city}
+                  name="branch"
+                  value={formData.branch}
                   onChange={handleProfileChange}
-                  placeholder="Enter your city"
+                  placeholder="e.g. ECE, CSE"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2 text-neutral-900">Country</label>
+                <label className="block text-sm font-medium mb-2 text-neutral-900">College</label>
                 <Input
-                  name="country"
-                  value={formData.country}
+                  name="college"
+                  value={formData.college}
                   onChange={handleProfileChange}
-                  placeholder="Enter your country"
+                  placeholder="Your college name"
                 />
               </div>
             </div>
@@ -128,7 +219,14 @@ export default function ProfilePage() {
               <Button onClick={handleProfileSave} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
-              <Button variant="outline" onClick={() => setIsEditing(false)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFormData(savedProfile);
+                  setErrorMessage('');
+                  setIsEditing(false);
+                }}
+              >
                 Cancel
               </Button>
             </div>
@@ -138,19 +236,23 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-neutral-600">Full Name</p>
-                <p className="text-lg font-medium text-neutral-900 mt-1">{formData.name}</p>
+                <p className="text-lg font-medium text-neutral-900 mt-1">{savedProfile.name || '—'}</p>
               </div>
               <div>
                 <p className="text-sm text-neutral-600">Email</p>
-                <p className="text-lg font-medium text-neutral-900 mt-1">{formData.email}</p>
+                <p className="text-lg font-medium text-neutral-900 mt-1">{email || '—'}</p>
               </div>
               <div>
-                <p className="text-sm text-neutral-600">Phone</p>
-                <p className="text-lg font-medium text-neutral-900 mt-1">{formData.phone}</p>
+                <p className="text-sm text-neutral-600">Mobile Number</p>
+                <p className="text-lg font-medium text-neutral-900 mt-1">{savedProfile.phone || '—'}</p>
               </div>
               <div>
-                <p className="text-sm text-neutral-600">Location</p>
-                <p className="text-lg font-medium text-neutral-900 mt-1">{formData.city}, {formData.country}</p>
+                <p className="text-sm text-neutral-600">Branch</p>
+                <p className="text-lg font-medium text-neutral-900 mt-1">{savedProfile.branch || '—'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-neutral-600">College</p>
+                <p className="text-lg font-medium text-neutral-900 mt-1">{savedProfile.college || '—'}</p>
               </div>
             </div>
 
@@ -165,93 +267,75 @@ export default function ProfilePage() {
     </Card>
   );
 
-  const addressesContent = (
+  const deliveryContent = (
     <Card>
       <CardHeader>
-        <CardTitle>Saved Addresses</CardTitle>
-        <CardDescription>Manage your delivery addresses</CardDescription>
+        <CardTitle>Delivery Information</CardTitle>
+        <CardDescription>Where your orders are delivered</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {[
-            { label: 'Home', address: '123 Main St, Bangalore, Karnataka 560001' },
-            { label: 'Work', address: '456 Business Ave, Bangalore, Karnataka 560002' },
-          ].map((addr, idx) => (
-            <div key={idx} className="border border-neutral-200 rounded-lg p-4 flex justify-between items-start">
-              <div>
-                <p className="font-semibold text-neutral-900">{addr.label}</p>
-                <p className="text-sm text-neutral-600 mt-1">{addr.address}</p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">Edit</Button>
-                <Button variant="outline" size="sm" className="text-red-600 border-red-200">Delete</Button>
-              </div>
-            </div>
-          ))}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4">
+          <p className="text-sm font-semibold text-amber-800">📦 College delivery only</p>
+          <p className="text-sm text-amber-700 mt-1">
+            We deliver parcels only at your college — not at home or any other place.
+          </p>
         </div>
-
-        <Button className="mt-6">Add New Address</Button>
+        <div>
+          <p className="text-sm text-neutral-600">Your delivery location</p>
+          <p className="text-lg font-medium text-neutral-900 mt-1">
+            {savedProfile.college || 'Add your college in the Profile tab'}
+          </p>
+        </div>
       </CardContent>
     </Card>
   );
 
   const securityContent = (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your password regularly for security</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2 text-neutral-900">Current Password</label>
-              <Input
-                type="password"
-                value={newPassword.current}
-                onChange={(e) => setNewPassword(prev => ({ ...prev, current: e.target.value }))}
-                placeholder="Enter current password"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-neutral-900">New Password</label>
-              <Input
-                type="password"
-                value={newPassword.new}
-                onChange={(e) => setNewPassword(prev => ({ ...prev, new: e.target.value }))}
-                placeholder="Enter new password"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2 text-neutral-900">Confirm Password</label>
-              <Input
-                type="password"
-                value={newPassword.confirm}
-                onChange={(e) => setNewPassword(prev => ({ ...prev, confirm: e.target.value }))}
-                placeholder="Confirm new password"
-              />
-            </div>
-
-            <Button onClick={handlePasswordChange} disabled={isSaving} className="mt-4">
-              {isSaving ? 'Updating...' : 'Update Password'}
-            </Button>
+    <Card>
+      <CardHeader>
+        <CardTitle>Change Password</CardTitle>
+        <CardDescription>Update your password regularly for security</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-neutral-900">Current Password</label>
+            <Input
+              type="password"
+              value={newPassword.current}
+              onChange={(e) => setNewPassword(prev => ({ ...prev, current: e.target.value }))}
+              placeholder="Enter current password"
+            />
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">
-            Delete Account
+          <div>
+            <label className="block text-sm font-medium mb-2 text-neutral-900">New Password</label>
+            <Input
+              type="password"
+              value={newPassword.new}
+              onChange={(e) => setNewPassword(prev => ({ ...prev, new: e.target.value }))}
+              placeholder="Enter new password"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2 text-neutral-900">Confirm Password</label>
+            <Input
+              type="password"
+              value={newPassword.confirm}
+              onChange={(e) => setNewPassword(prev => ({ ...prev, confirm: e.target.value }))}
+              placeholder="Confirm new password"
+            />
+          </div>
+
+          {passwordError && <p className="text-sm text-red-600">{passwordError}</p>}
+
+          <Button onClick={handlePasswordChange} disabled={isSaving} className="mt-4">
+            {isSaving ? 'Updating...' : 'Update Password'}
           </Button>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 
   return (
@@ -264,11 +348,14 @@ export default function ProfilePage() {
       {successMessage && (
         <Alert variant="success" className="mb-6">{successMessage}</Alert>
       )}
+      {errorMessage && (
+        <Alert variant="error" className="mb-6">{errorMessage}</Alert>
+      )}
 
       <Tabs
         tabs={[
           { label: 'Profile', value: 'profile', content: profileContent },
-          { label: 'Addresses', value: 'addresses', content: addressesContent },
+          { label: 'Delivery', value: 'delivery', content: deliveryContent },
           { label: 'Security', value: 'security', content: securityContent },
         ]}
         defaultTab="profile"

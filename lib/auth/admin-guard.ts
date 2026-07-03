@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getAdminAuth, getAdminDb } from '@/lib/firebase/admin';
+import { isCreatorEmail } from '@/lib/auth/creator';
 
 export interface AdminCheck {
   ok: boolean;
@@ -17,6 +18,9 @@ export async function verifyAdminRequest(request: NextRequest): Promise<AdminChe
 
   try {
     const decoded = await getAdminAuth().verifyIdToken(token);
+    if (isCreatorEmail(decoded.email)) {
+      return { ok: true, uid: decoded.uid };
+    }
     const userDoc = await getAdminDb().collection('users').doc(decoded.uid).get();
     if (userDoc.data()?.role !== 'ADMIN') {
       return { ok: false, error: 'Admin access required', status: 403 };

@@ -13,6 +13,7 @@ import {
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
 import { AuthUser } from './types';
+import { createUserProfile, ensureUserProfile, type UserProfileInput } from './profile';
 
 const MOCK_TOKEN_KEY = 'auth-token';
 
@@ -62,6 +63,7 @@ export function useAuth() {
     if (isFirebaseConfigured && auth) {
       const credential = await signInWithEmailAndPassword(auth, email, password);
       const authUser = firebaseUserToAuthUser(credential.user);
+      await ensureUserProfile(authUser.id, authUser.name, authUser.email);
       setUser(authUser);
       return authUser;
     }
@@ -77,15 +79,17 @@ export function useAuth() {
   }, []);
 
   const registerUser = useCallback(
-    async (name: string, email: string, password: string): Promise<AuthUser> => {
+    async (profile: UserProfileInput, password: string): Promise<AuthUser> => {
       if (isFirebaseConfigured && auth) {
-        const credential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(credential.user, { displayName: name });
-        const authUser = { ...firebaseUserToAuthUser(credential.user), name };
+        const credential = await createUserWithEmailAndPassword(auth, profile.email, password);
+        await updateProfile(credential.user, { displayName: profile.name });
+        await createUserProfile(credential.user.uid, profile);
+        const authUser = { ...firebaseUserToAuthUser(credential.user), name: profile.name };
         setUser(authUser);
         return authUser;
       }
-      const mockUser: AuthUser = { id: 'mock-1', email, name, role: 'CUSTOMER' };
+      const mockUser: AuthUser = { id: 'mock-1', email: profile.email, name: profile.name, role: 'CUSTOMER' };
+      await createUserProfile(mockUser.id, profile);
       writeMockUser(mockUser);
       setUser(mockUser);
       return mockUser;
@@ -97,6 +101,7 @@ export function useAuth() {
     if (isFirebaseConfigured && auth) {
       const credential = await signInWithPopup(auth, new GoogleAuthProvider());
       const authUser = firebaseUserToAuthUser(credential.user);
+      await ensureUserProfile(authUser.id, authUser.name, authUser.email);
       setUser(authUser);
       return authUser;
     }

@@ -10,6 +10,8 @@ import { RadioGroup } from '@/components/ui/Radio';
 import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
 import { useOrdersStore, nextOrderNumber } from '@/lib/stores/orders';
 import { coupons, Coupon } from '@/lib/mock/products';
+import { useAuth } from '@/lib/auth/client';
+import { fetchUserProfile } from '@/lib/auth/profile';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
@@ -28,6 +30,21 @@ export default function CheckoutPage() {
     state: '',
     pincode: '',
   });
+
+  const { user } = useAuth();
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const profile = await fetchUserProfile(user.id);
+      setShippingAddress(prev => ({
+        ...prev,
+        name: prev.name || profile?.name || user.name,
+        email: prev.email || user.email,
+        phone: prev.phone || profile?.phone || '',
+        address: prev.address || profile?.college || '',
+      }));
+    })();
+  }, [user]);
 
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [paymentMethod, setPaymentMethod] = useState('cod');
@@ -109,8 +126,11 @@ export default function CheckoutPage() {
         <p className="text-neutral-600 mb-1">
           Your order number is <span className="font-mono font-bold">{placedOrderId}</span>
         </p>
-        <p className="text-sm text-neutral-500 mb-8">
+        <p className="text-sm text-neutral-500 mb-2">
           A confirmation will be sent to {shippingAddress.email}. Payment: {paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase()}.
+        </p>
+        <p className="text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-8">
+          📦 Your parcel will be delivered at your college — we do not deliver to home or any other place.
         </p>
         <div className="flex gap-3 justify-center">
           <Link
@@ -193,6 +213,13 @@ export default function CheckoutPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <p className="text-sm font-semibold text-amber-800">📦 College delivery only</p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        We can deliver your parcel only at your college — not at home or any other place.
+                      </p>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium mb-1 block text-neutral-900">Full Name</label>
@@ -210,8 +237,13 @@ export default function CheckoutPage() {
                     </div>
 
                     <div>
-                      <label className="text-sm font-medium mb-1 block text-neutral-900">Address</label>
-                      <Input name="address" value={shippingAddress.address} onChange={handleAddressChange} />
+                      <label className="text-sm font-medium mb-1 block text-neutral-900">College Name &amp; Address</label>
+                      <Input
+                        name="address"
+                        value={shippingAddress.address}
+                        onChange={handleAddressChange}
+                        placeholder="Your college name and address"
+                      />
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">

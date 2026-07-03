@@ -31,7 +31,16 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
       setError(null);
-      await registerUser(data.name, data.email, data.password);
+      await registerUser(
+        {
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          branch: data.branch,
+          college: data.college,
+        },
+        data.password
+      );
       router.push('/');
     } catch (err) {
       setError(friendlyAuthError(err));
@@ -46,7 +55,7 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-2 text-neutral-900">Full Name</label>
+          <label className="block text-sm font-medium mb-2 text-neutral-900">Student&apos;s Full Name</label>
           <Input
             {...register('name')}
             type="text"
@@ -55,6 +64,32 @@ export default function RegisterPage() {
           />
           {errors.name && (
             <p className="text-red-600 text-sm mt-1">{errors.name.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2 text-neutral-900">Branch</label>
+          <Input
+            {...register('branch')}
+            type="text"
+            placeholder="e.g. ECE, CSE, Mechanical"
+            disabled={isLoading}
+          />
+          {errors.branch && (
+            <p className="text-red-600 text-sm mt-1">{errors.branch.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2 text-neutral-900">College</label>
+          <Input
+            {...register('college')}
+            type="text"
+            placeholder="Your college name"
+            disabled={isLoading}
+          />
+          {errors.college && (
+            <p className="text-red-600 text-sm mt-1">{errors.college.message}</p>
           )}
         </div>
 
@@ -68,6 +103,19 @@ export default function RegisterPage() {
           />
           {errors.email && (
             <p className="text-red-600 text-sm mt-1">{errors.email.message}</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-2 text-neutral-900">Mobile Number</label>
+          <Input
+            {...register('phone')}
+            type="tel"
+            placeholder="9876543210"
+            disabled={isLoading}
+          />
+          {errors.phone && (
+            <p className="text-red-600 text-sm mt-1">{errors.phone.message}</p>
           )}
         </div>
 

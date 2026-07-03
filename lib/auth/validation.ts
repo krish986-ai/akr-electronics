@@ -10,12 +10,22 @@ export const nameSchema = z.string().min(2, 'Name must be at least 2 characters'
 
 export const phoneSchema = z.string().regex(/^[+\d\-().\s]{10,}$/, 'Invalid phone number').optional();
 
+export const mobileSchema = z
+  .string()
+  .regex(/^(\+91[\s-]?)?[6-9]\d{9}$/, 'Enter a valid 10-digit mobile number');
+
+export const branchSchema = z.string().min(2, 'Branch is required');
+
+export const collegeSchema = z.string().min(2, 'College is required');
+
 // Registration validation
 export const registerSchema = z
   .object({
     email: emailSchema,
     name: nameSchema,
-    phone: phoneSchema,
+    branch: branchSchema,
+    college: collegeSchema,
+    phone: mobileSchema,
     password: passwordSchema,
     confirmPassword: z.string(),
   })
@@ -57,9 +67,10 @@ export type PasswordResetConfirmInput = z.infer<typeof passwordResetConfirmSchem
 
 // Profile update validation
 export const profileUpdateSchema = z.object({
-  name: nameSchema.optional(),
-  phone: phoneSchema,
-  image: z.string().url('Invalid image URL').optional(),
+  name: nameSchema,
+  phone: mobileSchema,
+  branch: branchSchema,
+  college: collegeSchema,
 });
 
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
