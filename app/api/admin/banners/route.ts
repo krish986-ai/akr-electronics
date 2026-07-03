@@ -10,6 +10,7 @@ const bannerSchema = z.object({
   cta: z.string().min(1).max(40),
   href: z.string().min(1),
   gradient: z.string().min(1),
+  image: z.string().min(1).optional(),
   badge: z.string().max(60).optional(),
   active: z.boolean(),
 });

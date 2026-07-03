@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CategoryNode, Product } from '@/lib/mock/products';
 import { getCategories, getProducts } from '@/lib/data/catalog';
-import { adminMutate } from '@/lib/api/admin-client';
+import { adminMutate, adminUpload } from '@/lib/api/admin-client';
+import { ImageUploadField, validateImageForUpload } from '@/components/admin/ImageUploadField';
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -17,7 +18,40 @@ export default function AdminCategoriesPage() {
   const [error, setError] = useState('');
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('📦');
+  const [newImage, setNewImage] = useState('');
   const [subDrafts, setSubDrafts] = useState<Record<string, string>>({});
+  const [pendingCat, setPendingCat] = useState<CategoryNode | null>(null);
+  const [uploadingCatId, setUploadingCatId] = useState('');
+  const catFileRef = useRef<HTMLInputElement>(null);
+
+  const uploadCategoryImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    const cat = pendingCat;
+    setPendingCat(null);
+    if (!file || !cat) return;
+
+    const validationError = validateImageForUpload(file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setUploadingCatId(cat.id);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', 'categories');
+      const result = await adminUpload<{ url: string }>('/api/upload', formData);
+      await adminMutate('/api/admin/categories', 'POST', { ...cat, image: result.url });
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploadingCatId('');
+    }
+  };
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -48,9 +82,11 @@ export default function AdminCategoriesPage() {
         name,
         slug: slugify(name),
         icon: newIcon || '📦',
+        image: newImage.trim() || undefined,
         children: [],
       });
       setNewName('');
+      setNewImage('');
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add category');
@@ -144,7 +180,24 @@ export default function AdminCategoriesPage() {
         <button type="submit" className="h-9 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700">
           + Add Category
         </button>
+        <div className="w-full">
+          <label className="block text-xs text-neutral-500 mb-1">Category image (optional)</label>
+          <ImageUploadField
+            value={newImage}
+            onChange={setNewImage}
+            category="categories"
+            onError={setError}
+          />
+        </div>
       </form>
+
+      <input
+        ref={catFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={uploadCategoryImage}
+      />
 
       {loading ? (
         <p className="p-8 text-center text-sm text-neutral-500">Loading categories...</p>
@@ -161,12 +214,30 @@ export default function AdminCategoriesPage() {
                   {expanded.includes(cat.id) ? '▾' : '▸'}
                 </button>
                 <span className="text-lg">{cat.icon}</span>
+                {cat.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={cat.image}
+                    alt=""
+                    className="w-8 h-8 rounded-lg object-cover border border-neutral-200 shrink-0"
+                  />
+                )}
                 <div className="flex-1">
                   <p className="text-sm font-medium text-neutral-900">{cat.name}</p>
                   <p className="text-xs text-neutral-500">/{cat.slug}</p>
                 </div>
                 <span className="text-xs text-neutral-500">{countProducts(cat)} products</span>
                 <span className="text-xs text-neutral-400">{cat.children?.length ?? 0} subcategories</span>
+                <button
+                  onClick={() => {
+                    setPendingCat(cat);
+                    catFileRef.current?.click();
+                  }}
+                  disabled={uploadingCatId === cat.id}
+                  className="text-xs text-primary-600 hover:underline font-medium disabled:opacity-50"
+                >
+                  {uploadingCatId === cat.id ? 'Uploading...' : cat.image ? '📤 Change Image' : '📤 Image'}
+                </button>
                 <button onClick={() => rename(cat)} className="text-xs text-primary-600 hover:underline font-medium">
                   Rename
                 </button>

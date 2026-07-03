@@ -134,7 +134,17 @@ function ProductsPageInner() {
                   active={selectedCategory === cat.slug}
                   onClick={() => { setSelectedCategory(cat.slug); setCurrentPage(1); }}
                 >
-                  {cat.icon} {cat.name}
+                  {cat.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={cat.image}
+                      alt=""
+                      className="inline-block w-4 h-4 rounded object-cover mr-1 align-text-bottom"
+                    />
+                  ) : (
+                    <>{cat.icon} </>
+                  )}
+                  {cat.name}
                 </FilterButton>
               ))}
             </div>

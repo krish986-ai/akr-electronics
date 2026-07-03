@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { HeroBanner } from '@/lib/mock/products';
 import { getBanners } from '@/lib/data/catalog';
 import { adminMutate } from '@/lib/api/admin-client';
+import { ImageUploadField } from '@/components/admin/ImageUploadField';
 
 const GRADIENTS = [
   'from-primary-700 via-primary-600 to-primary-400',
@@ -21,6 +22,7 @@ interface BannerForm {
   cta: string;
   href: string;
   gradient: string;
+  image: string;
   badge: string;
 }
 
@@ -30,6 +32,7 @@ const EMPTY_FORM: BannerForm = {
   cta: 'Shop Now',
   href: '/products',
   gradient: GRADIENTS[0],
+  image: '',
   badge: '',
 };
 
@@ -62,6 +65,7 @@ export default function AdminBannersPage() {
         cta: form.cta.trim(),
         href: form.href.trim(),
         gradient: form.gradient,
+        image: form.image.trim() || undefined,
         badge: form.badge.trim() || undefined,
         active: true,
       });
@@ -132,7 +136,12 @@ export default function AdminBannersPage() {
                 b.active === false ? 'opacity-50' : ''
               }`}
             >
-              <div className={`w-24 h-14 rounded-lg bg-gradient-to-r ${b.gradient} shrink-0`} />
+              {b.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={b.image} alt="" className="w-24 h-14 rounded-lg object-cover shrink-0" />
+              ) : (
+                <div className={`w-24 h-14 rounded-lg bg-gradient-to-r ${b.gradient} shrink-0`} />
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-neutral-900 truncate">{b.title}</p>
                 <p className="text-xs text-neutral-500 truncate">{b.subtitle}</p>
@@ -161,6 +170,7 @@ export default function AdminBannersPage() {
                     cta: b.cta,
                     href: b.href,
                     gradient: b.gradient,
+                    image: b.image ?? '',
                     badge: b.badge ?? '',
                   });
                 }}
@@ -203,7 +213,15 @@ export default function AdminBannersPage() {
               <Field label="Badge (optional)">
                 <input className={inputCls} value={form.badge} onChange={e => setForm({ ...form, badge: e.target.value })} placeholder="e.g. Limited offer" />
               </Field>
-              <Field label="Background">
+              <Field label="Background image (optional, shows instead of gradient)">
+                <ImageUploadField
+                  value={form.image}
+                  onChange={url => setForm(prev => (prev ? { ...prev, image: url } : prev))}
+                  category="banners"
+                  onError={setError}
+                />
+              </Field>
+              <Field label="Background gradient (used when no image)">
                 <div className="flex gap-2">
                   {GRADIENTS.map(g => (
                     <button

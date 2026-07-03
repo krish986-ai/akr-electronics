@@ -47,6 +47,7 @@ export interface CategoryNode {
   name: string;
   slug: string;
   icon: string;
+  image?: string;
   children?: CategoryNode[];
 }
 
@@ -57,6 +58,7 @@ export interface HeroBanner {
   cta: string;
   href: string;
   gradient: string;
+  image?: string;
   badge?: string;
   active?: boolean;
 }

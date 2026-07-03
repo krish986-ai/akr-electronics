@@ -15,6 +15,7 @@ const categorySchema = z.object({
   name: z.string().min(2).max(80),
   slug: z.string().min(2).max(80).regex(/^[a-z0-9-]+$/),
   icon: z.string().min(1).max(8),
+  image: z.string().min(1).optional(),
   children: z.array(childSchema).default([]),
 });
 

@@ -25,9 +25,22 @@ export function HeroCarousel() {
 
   return (
     <section
-      className={`relative bg-gradient-to-r ${banner.gradient} text-white transition-colors duration-700`}
+      className={`relative overflow-hidden text-white transition-colors duration-700 ${
+        banner.image ? 'bg-neutral-900' : `bg-gradient-to-r ${banner.gradient}`
+      }`}
     >
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24">
+      {banner.image && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={banner.image}
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/45" />
+        </>
+      )}
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="max-w-2xl">
           {banner.badge && (
             <span className="inline-block bg-white/15 backdrop-blur text-xs font-semibold px-3 py-1 rounded-full mb-4">
