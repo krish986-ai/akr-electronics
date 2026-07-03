@@ -1,8 +1,14 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { storageService } from '@/lib/storage/storage-service';
 import { validateImageFile } from '@/lib/validation/image-validation';
+import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 
 export async function POST(req: NextRequest) {
+  const check = await verifyAdminRequest(req);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
   try {
     const formData = await req.formData();
     const file = formData.get('file') as File;

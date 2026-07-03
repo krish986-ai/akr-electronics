@@ -8,20 +8,21 @@ export const imageUploadSchema = z.object({
 
 export type ImageUploadInput = z.infer<typeof imageUploadSchema>;
 
+export const MAX_IMAGE_SIZE_KB = 400;
+
 export const validateImageFile = (file: any): { isValid: boolean; error?: string } => {
-  const maxSize = 5 * 1024 * 1024; // 5MB
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const maxSize = MAX_IMAGE_SIZE_KB * 1024;
 
   if (!file) {
     return { isValid: false, error: 'File is required' };
   }
 
   if (file.size > maxSize) {
-    return { isValid: false, error: `File size exceeds 5MB limit` };
+    return { isValid: false, error: `Image must be under ${MAX_IMAGE_SIZE_KB} KB` };
   }
 
-  if (!allowedMimes.includes(file.type)) {
-    return { isValid: false, error: `File type not allowed. Allowed: ${allowedMimes.join(', ')}` };
+  if (typeof file.type !== 'string' || !file.type.startsWith('image/')) {
+    return { isValid: false, error: 'Only image files are allowed' };
   }
 
   return { isValid: true };

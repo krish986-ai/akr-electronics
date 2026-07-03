@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getProducts } from '@/lib/data/catalog';
-import { adminMutate } from '@/lib/api/admin-client';
+import { adminMutate, adminUpload } from '@/lib/api/admin-client';
+import { MAX_IMAGE_SIZE_KB } from '@/lib/validation/image-validation';
 import { Product, categoryTree, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
 
 interface EditorState {
@@ -109,8 +110,41 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState('');
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !editor) return;
+
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files can be uploaded');
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_KB * 1024) {
+      setError(
+        `Image is ${Math.round(file.size / 1024)} KB — it must be under ${MAX_IMAGE_SIZE_KB} KB`
+      );
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('category', 'products');
+      const result = await adminUpload<{ url: string }>('/api/upload', formData);
+      setEditor(prev => (prev ? { ...prev, image: result.url } : prev));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -301,8 +335,41 @@ export default function AdminProductsPage() {
               <Field label="SKU *">
                 <input className={inputCls} value={editor.sku} onChange={e => setEditor({ ...editor, sku: e.target.value })} placeholder="AKR-XX-0000" />
               </Field>
-              <Field label="Image URL *">
-                <input className={inputCls} value={editor.image} onChange={e => setEditor({ ...editor, image: e.target.value })} placeholder="https://..." />
+              <Field label="Image *">
+                <div className="flex items-center gap-2">
+                  {editor.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={editor.image}
+                      alt=""
+                      className="w-10 h-10 rounded-lg object-cover border border-neutral-200 shrink-0"
+                    />
+                  )}
+                  <input
+                    className={inputCls}
+                    value={editor.image}
+                    onChange={e => setEditor({ ...editor, image: e.target.value })}
+                    placeholder="https://... or upload"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="h-10 px-3 rounded-lg bg-primary-600 text-white text-xs font-semibold hover:bg-primary-700 disabled:opacity-50 whitespace-nowrap shrink-0"
+                  >
+                    {uploading ? 'Uploading...' : '📤 Upload'}
+                  </button>
+                </div>
+                <p className="text-[11px] text-neutral-500 mt-1">
+                  Any image type, max {MAX_IMAGE_SIZE_KB} KB — uploads straight to the store
+                </p>
               </Field>
               <Field label="Price ₹ (incl. GST) *">
                 <input type="number" className={inputCls} value={editor.price} onChange={e => setEditor({ ...editor, price: e.target.value })} />

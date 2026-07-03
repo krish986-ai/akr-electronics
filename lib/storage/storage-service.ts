@@ -1,14 +1,17 @@
 import { IStorageProvider, StorageFile, UploadOptions, StorageCategory } from './types';
 import { LocalStorageProvider } from './local-storage';
 import { FirebaseStorageProvider } from './firebase-storage';
+import { FirestoreStorageProvider } from './firestore-storage';
 
 // Vercel's serverless filesystem is read-only and ephemeral, so local disk
-// storage only works in development. Firebase Storage is used when deployed
-// or when explicitly enabled via STORAGE_PROVIDER=firebase.
+// storage only works in development without Firebase credentials. Firestore
+// holds uploaded images by default (Firebase Storage needs the paid Blaze
+// plan and no bucket is provisioned); STORAGE_PROVIDER can force a provider.
 function createDefaultProvider(): IStorageProvider {
-  const useFirebase =
-    process.env.STORAGE_PROVIDER === 'firebase' || process.env.VERCEL === '1';
-  return useFirebase ? new FirebaseStorageProvider() : new LocalStorageProvider();
+  if (process.env.STORAGE_PROVIDER === 'firebase') return new FirebaseStorageProvider();
+  if (process.env.STORAGE_PROVIDER === 'local') return new LocalStorageProvider();
+  if (process.env.FIREBASE_ADMIN_PROJECT_ID) return new FirestoreStorageProvider();
+  return new LocalStorageProvider();
 }
 
 class StorageService {
