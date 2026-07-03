@@ -2,17 +2,39 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useOrdersStore, orderTimeline, STATUS_BADGE_CLASSES } from '@/lib/stores/orders';
+import { orderTimeline, STATUS_BADGE_CLASSES, PlacedOrder } from '@/lib/stores/orders';
+import { fetchMyOrder } from '@/lib/orders/service';
+import { useAuth } from '@/lib/auth/client';
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const orders = useOrdersStore(state => state.orders);
+  const { user, isLoading } = useAuth();
+  const [order, setOrder] = useState<PlacedOrder | null>(null);
+  const [orderLoading, setOrderLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  if (!mounted) return null;
+  useEffect(() => {
+    if (isLoading) return;
+    if (!user) {
+      setOrderLoading(false);
+      return;
+    }
+    setOrderLoading(true);
+    fetchMyOrder(user.id, decodeURIComponent(id))
+      .then(setOrder)
+      .finally(() => setOrderLoading(false));
+  }, [user, isLoading, id]);
 
-  const order = orders.find(o => o.orderNumber === decodeURIComponent(id));
+  if (!mounted || isLoading) return null;
+
+  if (orderLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+        <p className="text-sm text-neutral-500">Loading order...</p>
+      </div>
+    );
+  }
 
   if (!order) {
     return (
@@ -112,9 +134,17 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
                 <span>₹{order.subtotal.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-neutral-500">Shipping</span>
+                <span className="text-neutral-500">
+                  {order.shippingMethod === 'express' ? 'Fast Delivery' : 'Shipping'}
+                </span>
                 <span>{order.shipping === 0 ? 'FREE' : `₹${order.shipping}`}</span>
               </div>
+              {(order.lowOrderCharge ?? 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-neutral-500">Small order charge</span>
+                  <span>₹{order.lowOrderCharge}</span>
+                </div>
+              )}
               {order.discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount</span>

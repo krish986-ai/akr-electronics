@@ -8,10 +8,13 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { RadioGroup } from '@/components/ui/Radio';
 import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
-import { useOrdersStore, nextOrderNumber } from '@/lib/stores/orders';
+import { nextOrderNumber } from '@/lib/stores/orders';
 import { coupons, Coupon } from '@/lib/mock/products';
 import { useAuth } from '@/lib/auth/client';
 import { fetchUserProfile } from '@/lib/auth/profile';
+import { submitOrder } from '@/lib/orders/service';
+import { fetchOrderSettings } from '@/lib/orders/settings-client';
+import { OrderSettings, defaultOrderSettings } from '@/lib/orders/settings';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
@@ -31,7 +34,7 @@ export default function CheckoutPage() {
     pincode: '',
   });
 
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -46,7 +49,14 @@ export default function CheckoutPage() {
     })();
   }, [user]);
 
+  const [settings, setSettings] = useState<OrderSettings>(defaultOrderSettings);
+  useEffect(() => {
+    fetchOrderSettings().then(setSettings);
+  }, []);
+
   const [shippingMethod, setShippingMethod] = useState('standard');
+  const [isPlacing, setIsPlacing] = useState(false);
+  const [placeError, setPlaceError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [coupon, setCoupon] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
@@ -54,13 +64,16 @@ export default function CheckoutPage() {
   const [placedOrderId, setPlacedOrderId] = useState('');
 
   const subtotal = cartSubtotal(items);
-  const shippingCost = shippingMethod === 'express' ? 100 : cartShipping(subtotal);
+  const shippingCost =
+    shippingMethod === 'express' ? settings.fastDeliveryCharge : cartShipping(subtotal);
+  const lowOrderCharge =
+    subtotal > 0 && subtotal < settings.minOrderAmount ? settings.lowOrderCharge : 0;
   const discount = appliedCoupon
     ? appliedCoupon.type === 'PERCENT'
       ? Math.round((subtotal * appliedCoupon.value) / 100)
       : appliedCoupon.value
     : 0;
-  const total = Math.max(0, subtotal + shippingCost - discount);
+  const total = Math.max(0, subtotal + shippingCost + lowOrderCharge - discount);
 
   const handleApplyCoupon = () => {
     const found = coupons.find(c => c.code === coupon.trim().toUpperCase() && c.active);
@@ -90,33 +103,69 @@ export default function CheckoutPage() {
     shippingAddress.city.trim() !== '' &&
     /^[1-9][0-9]{5}$/.test(shippingAddress.pincode);
 
-  const saveOrder = useOrdersStore(state => state.placeOrder);
-
-  const placeOrder = () => {
+  const placeOrder = async () => {
+    if (!user) return;
     const orderNumber = nextOrderNumber();
-    saveOrder({
-      orderNumber,
-      placedAt: new Date().toISOString(),
-      status: 'CONFIRMED',
-      paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase(),
-      items: items.map(item => ({
-        productId: item.productId,
-        name: item.name,
-        image: item.image,
-        price: item.price,
-        quantity: item.quantity,
-      })),
-      subtotal,
-      shipping: shippingCost,
-      discount,
-      total,
-      address: shippingAddress,
-    });
-    setPlacedOrderId(orderNumber);
-    clearCart();
+    setIsPlacing(true);
+    setPlaceError('');
+    try {
+      await submitOrder(user.id, {
+        orderNumber,
+        placedAt: new Date().toISOString(),
+        status: 'CONFIRMED',
+        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase(),
+        shippingMethod: shippingMethod === 'express' ? 'express' : 'standard',
+        items: items.map(item => ({
+          productId: item.productId,
+          name: item.name,
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        subtotal,
+        shipping: shippingCost,
+        lowOrderCharge,
+        discount,
+        total,
+        address: shippingAddress,
+      });
+      setPlacedOrderId(orderNumber);
+      clearCart();
+    } catch {
+      setPlaceError('Could not place your order. Please check your connection and try again.');
+    } finally {
+      setIsPlacing(false);
+    }
   };
 
-  if (!mounted) return null;
+  if (!mounted || authLoading) return null;
+
+  if (!user && !placedOrderId) {
+    return (
+      <div className={cn(container, 'py-20 max-w-md text-center')}>
+        <p className="text-5xl mb-4">🔒</p>
+        <h1 className="text-2xl font-bold text-neutral-900 mb-2">Sign in to place your order</h1>
+        <p className="text-sm text-neutral-500 mb-6">
+          Orders are linked to your student account so you can track them anytime. Your cart is
+          saved.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <Link
+            href="/auth/login"
+            className="h-11 px-6 leading-[44px] rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
+          >
+            Sign In
+          </Link>
+          <Link
+            href="/auth/register"
+            className="h-11 px-6 leading-[44px] rounded-lg border border-neutral-300 text-neutral-700 font-medium hover:bg-neutral-50"
+          >
+            Create Account
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (placedOrderId) {
     return (
@@ -293,8 +342,15 @@ export default function CheckoutPage() {
                   <div className="space-y-4">
                     <RadioGroup
                       options={[
-                        { value: 'standard', label: 'Standard Shipping (3-5 days) - FREE' },
-                        { value: 'express', label: 'Express Shipping (1-2 days) - ₹100' },
+                        { value: 'standard', label: 'Standard Delivery (3-5 days)' },
+                        ...(settings.fastDeliveryEnabled
+                          ? [
+                              {
+                                value: 'express',
+                                label: `Fast Delivery (1-2 days) - ₹${settings.fastDeliveryCharge}`,
+                              },
+                            ]
+                          : []),
                       ]}
                       value={shippingMethod}
                       onChange={setShippingMethod}
@@ -334,8 +390,20 @@ export default function CheckoutPage() {
                   </p>
                 )}
 
-                <Button size="lg" fullWidth className="mt-6" disabled={paymentMethod !== 'cod'} onClick={placeOrder}>
-                  Place Order - ₹{total.toLocaleString('en-IN')}
+                {placeError && (
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 mt-3">
+                    {placeError}
+                  </p>
+                )}
+
+                <Button
+                  size="lg"
+                  fullWidth
+                  className="mt-6"
+                  disabled={paymentMethod !== 'cod' || isPlacing}
+                  onClick={placeOrder}
+                >
+                  {isPlacing ? 'Placing Order...' : `Place Order - ₹${total.toLocaleString('en-IN')}`}
                 </Button>
               </CardContent>
             </Card>
@@ -366,9 +434,24 @@ export default function CheckoutPage() {
                   <span>₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-neutral-600">Shipping</span>
+                  <span className="text-neutral-600">
+                    {shippingMethod === 'express' ? 'Fast Delivery' : 'Shipping'}
+                  </span>
                   <span>{shippingCost === 0 ? 'FREE' : `₹${shippingCost}`}</span>
                 </div>
+                {lowOrderCharge > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-600">Small order charge</span>
+                    <span>₹{lowOrderCharge}</span>
+                  </div>
+                )}
+                {lowOrderCharge > 0 && (
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+                    Orders below ₹{settings.minOrderAmount.toLocaleString('en-IN')} have a small
+                    order charge. Add ₹{(settings.minOrderAmount - subtotal).toLocaleString('en-IN')}{' '}
+                    more to avoid it.
+                  </p>
+                )}
                 {appliedCoupon && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount ({appliedCoupon.code})</span>

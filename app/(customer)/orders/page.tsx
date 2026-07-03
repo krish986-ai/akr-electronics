@@ -3,13 +3,26 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/client';
-import { useOrdersStore, STATUS_BADGE_CLASSES } from '@/lib/stores/orders';
+import { STATUS_BADGE_CLASSES, PlacedOrder } from '@/lib/stores/orders';
+import { fetchMyOrders } from '@/lib/orders/service';
 
 export default function OrdersPage() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const orders = useOrdersStore(state => state.orders);
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [orders, setOrders] = useState<PlacedOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!user) {
+      setOrdersLoading(false);
+      return;
+    }
+    setOrdersLoading(true);
+    fetchMyOrders(user.id)
+      .then(setOrders)
+      .finally(() => setOrdersLoading(false));
+  }, [user]);
 
   if (!mounted || isLoading) return null;
 
@@ -34,6 +47,14 @@ export default function OrdersPage() {
             Track an Order
           </Link>
         </div>
+      </div>
+    );
+  }
+
+  if (ordersLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-20 text-center">
+        <p className="text-sm text-neutral-500">Loading your orders...</p>
       </div>
     );
   }

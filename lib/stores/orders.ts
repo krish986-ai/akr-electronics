@@ -34,9 +34,11 @@ export interface PlacedOrder {
   placedAt: string;
   status: OrderStatus;
   paymentMethod: string;
+  shippingMethod: 'standard' | 'express';
   items: PlacedOrderItem[];
   subtotal: number;
   shipping: number;
+  lowOrderCharge: number;
   discount: number;
   total: number;
   address: ShippingAddress;
