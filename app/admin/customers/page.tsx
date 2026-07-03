@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
+import { useAuth } from '@/lib/auth/client';
+import { isCreatorEmail } from '@/lib/auth/creator';
 
 interface CustomerRow {
   uid: string;
@@ -19,6 +21,8 @@ interface CustomerRow {
 }
 
 export default function AdminCustomersPage() {
+  const { user } = useAuth();
+  const canManageRoles = isCreatorEmail(user?.email);
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,7 +104,7 @@ export default function AdminCustomersPage() {
                 <th className="text-left px-4 py-3">Role</th>
                 <th className="text-left px-4 py-3">Verified</th>
                 <th className="text-left px-4 py-3">Joined</th>
-                <th className="text-left px-4 py-3">Actions</th>
+                {canManageRoles && <th className="text-left px-4 py-3">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -131,32 +135,34 @@ export default function AdminCustomersPage() {
                   </td>
                   <td className="px-4 py-3">{c.emailVerified ? '✅' : '—'}</td>
                   <td className="px-4 py-3 text-neutral-500 text-xs">{c.createdAt}</td>
-                  <td className="px-4 py-3">
-                    {c.isCreator ? (
-                      <span className="text-xs text-neutral-400">Protected</span>
-                    ) : c.role === 'ADMIN' ? (
-                      <button
-                        onClick={() => changeRole(c, 'CUSTOMER')}
-                        disabled={updatingUid === c.uid}
-                        className="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-50"
-                      >
-                        {updatingUid === c.uid ? 'Updating...' : 'Remove Admin'}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => changeRole(c, 'ADMIN')}
-                        disabled={updatingUid === c.uid}
-                        className="text-xs font-semibold text-primary-700 border border-primary-200 rounded-lg px-3 py-1.5 hover:bg-primary-50 disabled:opacity-50"
-                      >
-                        {updatingUid === c.uid ? 'Updating...' : 'Make Admin'}
-                      </button>
-                    )}
-                  </td>
+                  {canManageRoles && (
+                    <td className="px-4 py-3">
+                      {c.isCreator ? (
+                        <span className="text-xs text-neutral-400">Protected</span>
+                      ) : c.role === 'ADMIN' ? (
+                        <button
+                          onClick={() => changeRole(c, 'CUSTOMER')}
+                          disabled={updatingUid === c.uid}
+                          className="text-xs font-semibold text-red-600 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 disabled:opacity-50"
+                        >
+                          {updatingUid === c.uid ? 'Updating...' : 'Remove Admin'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => changeRole(c, 'ADMIN')}
+                          disabled={updatingUid === c.uid}
+                          className="text-xs font-semibold text-primary-700 border border-primary-200 rounded-lg px-3 py-1.5 hover:bg-primary-50 disabled:opacity-50"
+                        >
+                          {updatingUid === c.uid ? 'Updating...' : 'Make Admin'}
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
               {filtered.length === 0 && !error && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-neutral-500">
+                  <td colSpan={canManageRoles ? 8 : 7} className="px-4 py-8 text-center text-neutral-500">
                     No customers match your search.
                   </td>
                 </tr>

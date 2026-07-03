@@ -66,6 +66,12 @@ export async function PATCH(request: NextRequest) {
   if (!check.ok) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }
+  if (!isCreatorEmail(check.email)) {
+    return NextResponse.json(
+      { error: 'Only the creator can change admin roles' },
+      { status: 403 }
+    );
+  }
 
   let body: { uid?: string; role?: string };
   try {
