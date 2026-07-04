@@ -72,7 +72,58 @@ export function FloatingPartnerWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50">
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+      {/* Hover Details Card - Shows on Hover - Positioned Above */}
+      {hovering && (
+        <div className={`mb-4 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 w-96 transition-opacity ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          {/* Banner - Full Width */}
+          <div className="h-24 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
+            <img
+              src={partner.banner}
+              alt={partner.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+
+          {/* Details Section */}
+          <div className="p-5 space-y-4 flex flex-col">
+            {/* Logo and Name */}
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-lg border-2 border-primary-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-md">
+                <img
+                  src={partner.logo}
+                  alt={partner.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-lg text-neutral-900">{partner.name}</p>
+                <p className="text-xs text-primary-600 font-semibold mt-0.5">✨ Featured Partner</p>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p className="text-sm text-neutral-600 leading-relaxed line-clamp-3">
+              {partner.description}
+            </p>
+
+            {/* CTA Button Style */}
+            <div className="pt-2 border-t border-primary-100">
+              <p className="text-xs text-primary-600 font-bold flex items-center gap-2">
+                <span className="text-sm">👉</span>
+                <span>Click logo to visit website</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Floating Partner Logo with Animations */}
       <button
         onClick={() => window.open(partner.link, '_blank')}
@@ -110,57 +161,6 @@ export function FloatingPartnerWidget() {
           {/* Shine Effect */}
           <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/20 via-transparent to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
         </div>
-
-        {/* Hover Details Card - Shows on Hover */}
-        {hovering && (
-          <div className={`absolute -left-96 -top-8 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 w-96 z-50 transition-opacity flex flex-col ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            {/* Banner - Full Width */}
-            <div className="h-24 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
-              <img
-                src={partner.banner}
-                alt={partner.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
-            </div>
-
-            {/* Details Section */}
-            <div className="p-5 space-y-4 flex flex-col">
-              {/* Logo and Name */}
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-lg border-2 border-primary-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-md">
-                  <img
-                    src={partner.logo}
-                    alt={partner.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-lg text-neutral-900">{partner.name}</p>
-                  <p className="text-xs text-primary-600 font-semibold mt-0.5">✨ Featured Partner</p>
-                </div>
-              </div>
-
-              {/* Description */}
-              <p className="text-sm text-neutral-600 leading-relaxed line-clamp-3">
-                {partner.description}
-              </p>
-
-              {/* CTA Button Style */}
-              <div className="pt-2 border-t border-primary-100">
-                <p className="text-xs text-primary-600 font-bold flex items-center gap-2">
-                  <span className="text-sm">👉</span>
-                  <span>Click logo to visit website</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </button>
 
       {/* Floating Animation CSS */}
