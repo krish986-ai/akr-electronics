@@ -30,10 +30,23 @@ export default function AdminSettingsPage() {
     setError('');
     setSaved(false);
     try {
+      console.log('[Settings Page] Saving settings:', settings);
       await adminMutate('/api/admin/settings', 'PUT', settings);
+      console.log('[Settings Page] Settings saved, reloading...');
+
+      // Reload settings from API to confirm save
+      const res = await adminFetch('/api/admin/settings');
+      const data = await res.json();
+      console.log('[Settings Page] Reloaded settings:', data);
+
+      if (res.ok) {
+        setSettings(data);
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (e) {
+      console.error('[Settings Page] Error:', e);
       setError(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSaving(false);

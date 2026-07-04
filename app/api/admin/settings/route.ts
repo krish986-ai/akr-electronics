@@ -34,9 +34,16 @@ export async function PUT(request: NextRequest) {
 
   try {
     const settings = settingsSchema.parse(await request.json());
+    console.log('[Settings API] Saving settings:', settings);
     await getAdminDb().collection('config').doc('store').set(settings);
-    return NextResponse.json({ success: true });
+    console.log('[Settings API] Settings saved successfully');
+
+    const response = NextResponse.json({ success: true, settings });
+    // Prevent caching to ensure fresh data
+    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    return response;
   } catch (error) {
+    console.error('[Settings API] Error:', error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join('; ') },
