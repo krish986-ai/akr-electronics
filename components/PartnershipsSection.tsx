@@ -12,6 +12,19 @@ interface Partnership {
   enabled: boolean;
 }
 
+// Default test partnership for Engorio
+const TEST_PARTNERSHIPS: Partnership[] = [
+  {
+    id: 'engorio-test',
+    name: 'Engorio',
+    logo: 'https://via.placeholder.com/200x200?text=Engorio+Logo',
+    link: 'https://engorio-91f5c.web.app',
+    banner: 'https://via.placeholder.com/1200x300?text=Engorio+Banner',
+    description: 'Complete IoT project guides, tutorials, and free resources. Learn how to build IoT projects with step-by-step guides, free reports, presentations, and code upload guides without installing heavy software.',
+    enabled: true,
+  },
+];
+
 export function PartnershipsSection() {
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,13 +32,22 @@ export function PartnershipsSection() {
   useEffect(() => {
     const loadPartnerships = async () => {
       try {
+        console.log('[PartnershipsSection] Fetching partnerships...');
         const res = await fetch('/api/partnerships');
         const data = await res.json();
-        if (res.ok && data.partnerships) {
-          setPartnerships(data.partnerships.filter((p: Partnership) => p.enabled));
+        console.log('[PartnershipsSection] API Response:', data);
+
+        if (res.ok && data.partnerships && data.partnerships.length > 0) {
+          const enabled = data.partnerships.filter((p: Partnership) => p.enabled);
+          console.log('[PartnershipsSection] Enabled partnerships:', enabled);
+          setPartnerships(enabled);
+        } else {
+          console.log('[PartnershipsSection] No partnerships from API, using test data');
+          setPartnerships(TEST_PARTNERSHIPS);
         }
       } catch (e) {
-        console.error('Failed to load partnerships:', e);
+        console.error('[PartnershipsSection] Error:', e);
+        setPartnerships(TEST_PARTNERSHIPS);
       } finally {
         setLoading(false);
       }
@@ -110,13 +132,22 @@ export function PartnershipsLogoBar() {
   useEffect(() => {
     const loadPartnerships = async () => {
       try {
+        console.log('[PartnershipsLogoBar] Fetching partnerships...');
         const res = await fetch('/api/partnerships');
         const data = await res.json();
-        if (res.ok && data.partnerships) {
-          setPartnerships(data.partnerships.filter((p: Partnership) => p.enabled).slice(0, 6));
+        console.log('[PartnershipsLogoBar] API Response:', data);
+
+        if (res.ok && data.partnerships && data.partnerships.length > 0) {
+          const enabled = data.partnerships.filter((p: Partnership) => p.enabled).slice(0, 6);
+          console.log('[PartnershipsLogoBar] Enabled partnerships:', enabled);
+          setPartnerships(enabled);
+        } else {
+          console.log('[PartnershipsLogoBar] No partnerships from API, using test data');
+          setPartnerships(TEST_PARTNERSHIPS.slice(0, 6));
         }
-      } catch {
-        // silently fail
+      } catch (e) {
+        console.error('[PartnershipsLogoBar] Error:', e);
+        setPartnerships(TEST_PARTNERSHIPS.slice(0, 6));
       }
     };
 
