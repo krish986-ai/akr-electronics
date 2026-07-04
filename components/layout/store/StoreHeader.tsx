@@ -100,24 +100,17 @@ export function StoreHeader() {
             />
 
             {/* Text and Partner Section - continuous animation loop */}
-            <div className="hidden sm:flex flex-col gap-1 relative overflow-hidden h-10">
-              {/* AKR Text - always available, animated */}
-              <div
-                className={`absolute transition-all duration-500 ease-in-out ${
-                  partner && showPartner ? 'opacity-0 -translate-y-full' : 'opacity-100 translate-y-0'
-                }`}
-              >
-                <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
-                <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
-              </div>
+            <div className="hidden sm:block">
+              {/* Show AKR or Partner - animate between them */}
+              {(!partner || !showPartner) && (
+                <div className="transition-all duration-500 ease-in-out">
+                  <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
+                  <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
+                </div>
+              )}
 
-              {/* Partner Info - shows when partner exists and showPartner is true */}
-              {partner && (
-                <div
-                  className={`absolute transition-all duration-500 ease-in-out ${
-                    showPartner ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-full'
-                  }`}
-                >
+              {partner && showPartner && (
+                <div className="transition-all duration-500 ease-in-out">
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded overflow-hidden border border-primary-200 flex-shrink-0 flex items-center justify-center bg-white">
                       <img
