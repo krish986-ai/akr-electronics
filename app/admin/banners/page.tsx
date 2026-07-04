@@ -188,13 +188,18 @@ export default function AdminBannersPage() {
 
       {form && (
         <div className="fixed inset-0 bg-black/40 z-50 grid place-items-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-lg p-6">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-neutral-900">{form.id ? 'Edit Banner' : 'New Banner'}</h2>
               <button onClick={() => setForm(null)} className="text-neutral-400 hover:text-neutral-700 text-xl">
                 ✕
               </button>
             </div>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {error}
+              </div>
+            )}
             <div className="space-y-4">
               <Field label="Title *">
                 <input className={inputCls} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
