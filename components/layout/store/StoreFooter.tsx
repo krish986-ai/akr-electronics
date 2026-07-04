@@ -49,8 +49,8 @@ export function StoreFooter() {
   useEffect(() => {
     const loadPhone = async () => {
       try {
-        console.log('[StoreFooter] Loading phone number...');
-        const res = await fetch('/api/admin/settings', {
+        console.log('[StoreFooter] Loading phone from public API...');
+        const res = await fetch('/api/public/settings', {
           cache: 'no-store',
           headers: {
             'Cache-Control': 'no-store, max-age=0',
