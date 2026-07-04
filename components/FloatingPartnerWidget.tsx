@@ -16,6 +16,7 @@ export function FloatingPartnerWidget() {
   const [partner, setPartner] = useState<Partnership | null>(null);
   const [loading, setLoading] = useState(true);
   const [hovering, setHovering] = useState(false);
+  const [hideTimeoutId, setHideTimeoutId] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const loadPartner = async () => {
@@ -43,6 +44,29 @@ export function FloatingPartnerWidget() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleMouseLeave = () => {
+    // Clear any existing timeout
+    if (hideTimeoutId) {
+      clearTimeout(hideTimeoutId);
+    }
+
+    // Set new timeout to hide after 1 second
+    const timeout = setTimeout(() => {
+      setHovering(false);
+    }, 1000);
+
+    setHideTimeoutId(timeout);
+  };
+
+  const handleMouseEnter = () => {
+    // Clear hide timeout if mouse re-enters
+    if (hideTimeoutId) {
+      clearTimeout(hideTimeoutId);
+      setHideTimeoutId(null);
+    }
+    setHovering(true);
+  };
+
   if (loading || !partner) {
     return null;
   }
@@ -52,8 +76,8 @@ export function FloatingPartnerWidget() {
       {/* Floating Partner Logo with Animations */}
       <button
         onClick={() => window.open(partner.link, '_blank')}
-        onMouseEnter={() => setHovering(true)}
-        onMouseLeave={() => setHovering(false)}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className="group relative flex flex-col items-center gap-2 cursor-pointer"
       >
         {/* Outer Glow - Continuous Animation */}
@@ -89,7 +113,7 @@ export function FloatingPartnerWidget() {
 
         {/* Hover Details Card - Shows on Hover */}
         {hovering && (
-          <div className="absolute bottom-full mb-3 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 w-80">
+          <div className={`absolute -left-80 top-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 w-80 z-50 transition-opacity ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             {/* Mini Banner */}
             <div className="h-20 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
               <img
