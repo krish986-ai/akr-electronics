@@ -132,12 +132,17 @@ export function FloatingPartnerWidget() {
               </p>
             </div>
 
-            {/* CTA Button Style */}
+            {/* CTA Link */}
             <div className="pt-2 border-t border-primary-100">
-              <p className="text-xs text-primary-600 font-bold flex items-center gap-2">
-                <span className="text-sm">👉</span>
-                <span>Click logo to visit website</span>
-              </p>
+              <a
+                href={partner.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary-600 font-bold hover:text-primary-700 hover:underline flex items-center gap-2 transition-colors"
+              >
+                <span className="text-sm">→</span>
+                <span>Visit Website</span>
+              </a>
             </div>
           </div>
         </div>
