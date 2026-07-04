@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { CreatorGuard } from '@/components/admin/CreatorGuard';
+import { ImageUploadField } from '@/components/admin/ImageUploadField';
 
 interface Partnership {
   id: string;
@@ -21,6 +22,8 @@ function PartnershipsContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState('');
   const [formData, setFormData] = useState<Omit<Partnership, 'id' | 'createdAt'>>({
     name: '',
     logo: '',
@@ -48,40 +51,64 @@ function PartnershipsContent() {
     }
   };
 
+  const resetForm = () => {
+    setFormData({ name: '', logo: '', link: '', banner: '', description: '', enabled: true });
+    setShowForm(false);
+    setEditingId(null);
+    setFormError('');
+  };
+
   const handleAddPartnership = async () => {
+    setFormError('');
     setError('');
-    setSuccess('');
 
     if (!formData.name.trim()) {
-      setError('Partnership name is required');
+      setFormError('Partnership name is required');
       return;
     }
     if (!formData.logo.trim()) {
-      setError('Logo URL is required');
+      setFormError('Logo is required');
       return;
     }
     if (!formData.link.trim()) {
-      setError('Partnership link is required');
+      setFormError('Partnership link is required');
       return;
     }
     if (!formData.banner.trim()) {
-      setError('Banner URL is required');
+      setFormError('Banner is required');
       return;
     }
     if (!formData.description.trim()) {
-      setError('Description is required');
+      setFormError('Description is required');
       return;
     }
 
     try {
-      await adminMutate('/api/admin/creator/partnerships', 'POST', formData);
-      setSuccess('Partnership added successfully');
-      setFormData({ name: '', logo: '', link: '', banner: '', description: '', enabled: true });
-      setShowForm(false);
+      if (editingId) {
+        await adminMutate('/api/admin/creator/partnerships', 'PUT', { id: editingId, ...formData });
+        setSuccess('Partnership updated successfully');
+      } else {
+        await adminMutate('/api/admin/creator/partnerships', 'POST', formData);
+        setSuccess('Partnership added successfully');
+      }
+      resetForm();
       loadPartnerships();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to add partnership');
+      setError(e instanceof Error ? e.message : 'Failed to save partnership');
     }
+  };
+
+  const handleEditPartnership = (partnership: Partnership) => {
+    setFormData({
+      name: partnership.name,
+      logo: partnership.logo,
+      link: partnership.link,
+      banner: partnership.banner,
+      description: partnership.description,
+      enabled: partnership.enabled,
+    });
+    setEditingId(partnership.id);
+    setShowForm(true);
   };
 
   const handleTogglePartnership = async (id: string, enabled: boolean) => {
@@ -171,6 +198,12 @@ function PartnershipsContent() {
                         {p.enabled ? '✓ Active' : 'Hidden'}
                       </button>
                       <button
+                        onClick={() => handleEditPartnership(p)}
+                        className="h-9 px-3 rounded-lg border border-neutral-300 text-neutral-600 text-xs font-semibold hover:bg-neutral-50"
+                      >
+                        ✎ Edit
+                      </button>
+                      <button
                         onClick={() => handleDeletePartnership(p.id)}
                         className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50"
                       >
@@ -213,19 +246,18 @@ function PartnershipsContent() {
           {showForm && (
             <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-neutral-900">Add Partnership</h3>
-                {formData.name && (
-                  <button
-                    onClick={() => {
-                      setFormData({ name: '', logo: '', link: '', banner: '', description: '', enabled: true });
-                      setShowForm(false);
-                    }}
-                    className="text-xs text-neutral-500 hover:text-neutral-700"
-                  >
-                    Clear Form
-                  </button>
-                )}
+                <h3 className="font-semibold text-neutral-900">{editingId ? 'Edit' : 'Add'} Partnership</h3>
+                <button
+                  onClick={resetForm}
+                  className="text-xs text-neutral-500 hover:text-neutral-700"
+                >
+                  ✕ Close
+                </button>
               </div>
+
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{formError}</div>
+              )}
 
               <Field label="Partnership Name (e.g., Engorio)">
                 <input
@@ -237,13 +269,13 @@ function PartnershipsContent() {
                 />
               </Field>
 
-              <Field label="Logo URL (Square image, min 200x200px)">
-                <input
-                  type="url"
-                  className={inputCls}
-                  placeholder="https://engorio-91f5c.web.app/logo.png"
+              <Field label="Logo (Square image, min 200x200px)">
+                <ImageUploadField
                   value={formData.logo}
-                  onChange={e => setFormData(prev => ({ ...prev, logo: e.target.value }))}
+                  onChange={url => setFormData(prev => ({ ...prev, logo: url }))}
+                  category="website"
+                  onError={setFormError}
+                  placeholder="Upload or paste logo URL"
                 />
               </Field>
 
@@ -257,13 +289,13 @@ function PartnershipsContent() {
                 />
               </Field>
 
-              <Field label="Banner Image URL (1200x300px recommended)">
-                <input
-                  type="url"
-                  className={inputCls}
-                  placeholder="https://engorio-91f5c.web.app/banner.png"
+              <Field label="Banner Image (1200x300px recommended)">
+                <ImageUploadField
                   value={formData.banner}
-                  onChange={e => setFormData(prev => ({ ...prev, banner: e.target.value }))}
+                  onChange={url => setFormData(prev => ({ ...prev, banner: url }))}
+                  category="banners"
+                  onError={setFormError}
+                  placeholder="Upload or paste banner URL"
                 />
               </Field>
 
@@ -282,13 +314,10 @@ function PartnershipsContent() {
                   onClick={handleAddPartnership}
                   className="h-11 px-8 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
                 >
-                  Add Partnership
+                  {editingId ? 'Save Changes' : 'Add Partnership'}
                 </button>
                 <button
-                  onClick={() => {
-                    setShowForm(false);
-                    setFormData({ name: '', logo: '', link: '', banner: '', description: '', enabled: true });
-                  }}
+                  onClick={resetForm}
                   className="h-11 px-8 rounded-lg border border-neutral-300 text-neutral-600 font-semibold hover:bg-neutral-50"
                 >
                   Cancel

@@ -90,6 +90,37 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
+export async function PUT(request: NextRequest) {
+  const check = await verifyCreatorRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
+  let body: PartnershipData & { id: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  const { id, ...data } = body;
+
+  if (!id) {
+    return NextResponse.json({ error: 'Partnership id is required' }, { status: 400 });
+  }
+
+  if (!data.name || !data.logo || !data.link || !data.banner || !data.description) {
+    return NextResponse.json({ error: 'All partnership fields are required' }, { status: 400 });
+  }
+
+  try {
+    await getAdminDb().collection('partnerships').doc(id).update(data);
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: 'Failed to update partnership' }, { status: 500 });
+  }
+}
+
 export async function DELETE(request: NextRequest) {
   const check = await verifyCreatorRequest(request);
   if (!check.ok) {
