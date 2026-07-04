@@ -82,24 +82,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const deleteForever = async (order: AdminOrder) => {
-    const getPassword = () => {
-      if (typeof window === 'undefined') return null;
-      return (window as any).prompt(
-        `⚠ PERMANENT DELETE — ${order.orderNumber}\n\nThis removes the order completely: from this list, the dashboard revenue, and the customer's account. It cannot be undone.\n\nEnter the admin action password to continue:`
-      );
-    };
-    const password = getPassword();
-    if (password === null) return;
-    setError('');
-    try {
-      await adminMutate('/api/admin/orders', 'DELETE', { id: order.id, password });
-      setOrders(prev => prev.filter(o => o.id !== order.id));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete order');
-    }
-  };
-
   const visible = orders.filter(o => !o.archived && o.status !== 'PENDING');
   const archivedOrders = orders.filter(o => o.archived);
   const pendingCount = orders.filter(o => !o.archived && o.status === 'PENDING').length;
@@ -216,7 +198,6 @@ export default function AdminOrdersPage() {
                   onToggle={() => setExpanded(expanded === order.id ? null : order.id)}
                   onStatusChange={status => changeStatus(order.id, status)}
                   onRemove={() => removeOrder(order)}
-                  onDeleteForever={() => deleteForever(order)}
                 />
               ))}
               {filtered.length === 0 && (
@@ -322,14 +303,12 @@ function AdminOrderCard({
   onToggle,
   onStatusChange,
   onRemove,
-  onDeleteForever,
 }: {
   order: AdminOrder;
   expanded: boolean;
   onToggle: () => void;
   onStatusChange: (status: OrderStatus) => void;
   onRemove: () => void;
-  onDeleteForever: () => void;
 }) {
   const itemsSubtotal = order.subtotal;
   const lowOrderCharge = order.lowOrderCharge ?? 0;
@@ -382,13 +361,6 @@ function AdminOrderCard({
             🗑 Remove
           </button>
         )}
-        <button
-          onClick={onDeleteForever}
-          title="Permanently delete this order from everywhere (password required)"
-          className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 whitespace-nowrap"
-        >
-          ✕ Delete Forever
-        </button>
       </div>
 
       {expanded && (
