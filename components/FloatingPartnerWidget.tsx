@@ -67,6 +67,19 @@ export function FloatingPartnerWidget() {
     setHovering(true);
   };
 
+  const handleCardMouseEnter = () => {
+    // Keep card open when hovering over it
+    if (hideTimeoutId) {
+      clearTimeout(hideTimeoutId);
+      setHideTimeoutId(null);
+    }
+  };
+
+  const handleCardMouseLeave = () => {
+    // Start hide timer when leaving the card
+    handleMouseLeave();
+  };
+
   if (loading || !partner) {
     return null;
   }
@@ -75,7 +88,11 @@ export function FloatingPartnerWidget() {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Hover Details Card - Shows on Hover - Positioned Above */}
       {hovering && (
-        <div className={`mb-4 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 w-96 transition-opacity ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div
+          className={`mb-4 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 w-96 transition-opacity ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          onMouseEnter={handleCardMouseEnter}
+          onMouseLeave={handleCardMouseLeave}
+        >
           {/* Banner - Full Width */}
           <div className="h-24 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
             <img
@@ -108,10 +125,12 @@ export function FloatingPartnerWidget() {
               </div>
             </div>
 
-            {/* Description */}
-            <p className="text-sm text-neutral-600 leading-relaxed line-clamp-3">
-              {partner.description}
-            </p>
+            {/* Description - Full Details */}
+            <div className="max-h-32 overflow-y-auto">
+              <p className="text-sm text-neutral-600 leading-relaxed">
+                {partner.description}
+              </p>
+            </div>
 
             {/* CTA Button Style */}
             <div className="pt-2 border-t border-primary-100">
