@@ -14,6 +14,7 @@ export async function GET() {
       storeName: data?.storeName || 'A.K.R Electronics',
       announcement: data?.announcement || '',
       freeDeliveryThreshold: data?.freeDeliveryThreshold || 999,
+      deliveryCharges: data?.deliveryCharges || 50,
     });
 
     // No cache - always fresh
@@ -27,6 +28,7 @@ export async function GET() {
       storeName: 'A.K.R Electronics',
       announcement: '',
       freeDeliveryThreshold: 999,
+      deliveryCharges: 50,
     });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     return response;
