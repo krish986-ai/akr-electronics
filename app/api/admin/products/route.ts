@@ -3,12 +3,13 @@ import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { STANDARD_WARRANTY, GST_RATE_DEFAULT } from '@/lib/mock/products';
+import { imageUrlSchema } from '@/lib/validation/image-validation';
 
 const productInputSchema = z.object({
   name: z.string().min(2).max(200),
   slug: z.string().min(2).max(200).regex(/^[a-z0-9-]+$/),
   sku: z.string().min(2).max(50),
-  image: z.string().url(),
+  image: imageUrlSchema,
   price: z.number().positive(),
   originalPrice: z.number().positive().optional(),
   gstRate: z.number().min(0).max(28).default(GST_RATE_DEFAULT),

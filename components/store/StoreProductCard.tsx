@@ -54,8 +54,20 @@ export function StoreProductCard({ product }: { product: Product }) {
           )}
         </div>
         <p className="text-[10px] text-neutral-400">Incl. GST</p>
-        <p className={`text-[11px] font-medium mt-1 ${product.stock > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-          {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+        <p
+          className={`text-[11px] font-medium mt-1 ${
+            product.stock === 0
+              ? 'text-red-600'
+              : product.stock <= 5
+                ? 'text-amber-600'
+                : 'text-emerald-600'
+          }`}
+        >
+          {product.stock === 0
+            ? 'Out of Stock'
+            : product.stock <= 5
+              ? `Only ${product.stock} left!`
+              : 'In Stock'}
         </p>
       </div>
     </Link>

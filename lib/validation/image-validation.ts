@@ -10,6 +10,15 @@ export type ImageUploadInput = z.infer<typeof imageUploadSchema>;
 
 export const MAX_IMAGE_SIZE_KB = 400;
 
+// Product/banner/category images are either external URLs or site-hosted
+// upload paths like /api/images/<id>, so plain z.string().url() is too strict.
+export const imageUrlSchema = z
+  .string()
+  .min(1)
+  .refine(v => v.startsWith('/') || /^https?:\/\//i.test(v), {
+    message: 'Must be an http(s) URL or an uploaded image path',
+  });
+
 export const validateImageFile = (file: any): { isValid: boolean; error?: string } => {
   const maxSize = MAX_IMAGE_SIZE_KB * 1024;
 

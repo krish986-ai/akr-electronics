@@ -1,14 +1,7 @@
 'use client';
 
-import {
-  addDoc,
-  collection,
-  getDocs,
-  query,
-  serverTimestamp,
-  where,
-} from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { auth, db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { PlacedOrder, useOrdersStore } from '@/lib/stores/orders';
 
 function docToPlacedOrder(data: Record<string, unknown>): PlacedOrder {
@@ -20,13 +13,21 @@ function docToPlacedOrder(data: Record<string, unknown>): PlacedOrder {
   };
 }
 
-export async function submitOrder(userId: string, order: PlacedOrder): Promise<void> {
-  if (isFirebaseConfigured && db) {
-    await addDoc(collection(db, 'orders'), {
-      ...order,
-      userId,
-      createdAt: serverTimestamp(),
+export async function submitOrder(_userId: string, order: PlacedOrder): Promise<void> {
+  if (isFirebaseConfigured && auth?.currentUser) {
+    const token = await auth.currentUser.getIdToken();
+    const res = await fetch('/api/orders/place', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(order),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? `Order failed (${res.status})`);
+    }
     return;
   }
   useOrdersStore.getState().placeOrder(order);

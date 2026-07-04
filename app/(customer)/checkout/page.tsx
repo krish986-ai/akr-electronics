@@ -136,8 +136,12 @@ export default function CheckoutPage() {
       });
       setPlacedOrderId(orderNumber);
       clearCart();
-    } catch {
-      setPlaceError('Could not place your order. Please check your connection and try again.');
+    } catch (err) {
+      setPlaceError(
+        err instanceof Error && err.message
+          ? err.message
+          : 'Could not place your order. Please check your connection and try again.'
+      );
     } finally {
       setIsPlacing(false);
     }

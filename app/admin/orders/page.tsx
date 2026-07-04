@@ -13,7 +13,22 @@ import { OrderSettings, defaultOrderSettings } from '@/lib/orders/settings';
 interface AdminOrder extends PlacedOrder {
   id: string;
   userId?: string;
+  archived?: boolean;
 }
+
+interface BulkEnquiry {
+  id: string;
+  contactName: string;
+  organisation: string;
+  email: string;
+  phone: string;
+  gstin?: string;
+  requirements: string;
+  status: 'NEW' | 'CONTACTED' | 'CLOSED';
+  createdAt: string;
+}
+
+const STATUS_FILTERS = ['ALL', ...ORDER_STATUSES, 'CANCELLED'] as const;
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -21,6 +36,8 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<'orders' | 'bulk'>('orders');
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]>('ALL');
 
   useEffect(() => {
     (async () => {
@@ -48,11 +65,31 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const filtered = orders.filter(
+  const removeOrder = async (order: AdminOrder) => {
+    if (
+      !window.confirm(
+        `Remove delivered order ${order.orderNumber} from this list? It stays in total revenue on the dashboard.`
+      )
+    ) {
+      return;
+    }
+    const previous = orders;
+    setOrders(prev => prev.map(o => (o.id === order.id ? { ...o, archived: true } : o)));
+    try {
+      await adminMutate('/api/admin/orders', 'PATCH', { id: order.id, archive: true });
+    } catch (e) {
+      setOrders(previous);
+      setError(e instanceof Error ? e.message : 'Failed to remove order');
+    }
+  };
+
+  const visible = orders.filter(o => !o.archived);
+  const filtered = visible.filter(
     o =>
-      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      o.address.name.toLowerCase().includes(search.toLowerCase()) ||
-      o.address.email.toLowerCase().includes(search.toLowerCase())
+      (statusFilter === 'ALL' || o.status === statusFilter) &&
+      (o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
+        o.address.name.toLowerCase().includes(search.toLowerCase()) ||
+        o.address.email.toLowerCase().includes(search.toLowerCase()))
   );
 
   const revenue = orders
@@ -65,8 +102,8 @@ export default function AdminOrdersPage() {
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Orders</h1>
           <p className="text-sm text-neutral-500">
-            {orders.length} order{orders.length === 1 ? '' : 's'} · ₹
-            {revenue.toLocaleString('en-IN')} revenue (live from Firebase)
+            {visible.length} order{visible.length === 1 ? '' : 's'} · ₹
+            {revenue.toLocaleString('en-IN')} revenue incl. removed (live from Firebase)
           </p>
         </div>
         <input
@@ -77,41 +114,176 @@ export default function AdminOrdersPage() {
         />
       </div>
 
-      <OrderSettingsPanel onError={setError} />
+      <div className="flex gap-2">
+        <button
+          onClick={() => setView('orders')}
+          className={`h-9 px-4 rounded-lg text-sm font-semibold ${
+            view === 'orders'
+              ? 'bg-primary-600 text-white'
+              : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
+          }`}
+        >
+          🛒 Customer Orders
+        </button>
+        <button
+          onClick={() => setView('bulk')}
+          className={`h-9 px-4 rounded-lg text-sm font-semibold ${
+            view === 'bulk'
+              ? 'bg-primary-600 text-white'
+              : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
+          }`}
+        >
+          🏫 Bulk Enquiries
+        </button>
+      </div>
 
       {error && (
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
       )}
 
-      {loading ? (
-        <p className="p-8 text-center text-sm text-neutral-500 bg-white rounded-xl border border-neutral-200">
-          Loading orders...
+      {view === 'bulk' ? (
+        <BulkEnquiriesPanel onError={setError} />
+      ) : (
+        <>
+          <OrderSettingsPanel onError={setError} />
+
+          <div className="flex gap-1.5 flex-wrap">
+            {STATUS_FILTERS.map(s => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`h-8 px-3 rounded-full text-xs font-semibold ${
+                  statusFilter === s
+                    ? 'bg-neutral-900 text-white'
+                    : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
+                }`}
+              >
+                {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
+                {s !== 'ALL' && (
+                  <span className="ml-1 opacity-60">{visible.filter(o => o.status === s).length}</span>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <p className="p-8 text-center text-sm text-neutral-500 bg-white rounded-xl border border-neutral-200">
+              Loading orders...
+            </p>
+          ) : visible.length === 0 ? (
+            <div className="text-center py-16 bg-white rounded-xl border border-dashed border-neutral-300">
+              <p className="text-4xl mb-3">📋</p>
+              <p className="font-medium text-neutral-900">No orders yet</p>
+              <p className="text-sm text-neutral-500 mt-1">
+                Orders placed on the storefront will appear here. Place a test order via the checkout
+                to try the status pipeline.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map(order => (
+                <AdminOrderCard
+                  key={order.id}
+                  order={order}
+                  expanded={expanded === order.id}
+                  onToggle={() => setExpanded(expanded === order.id ? null : order.id)}
+                  onStatusChange={status => changeStatus(order.id, status)}
+                  onRemove={() => removeOrder(order)}
+                />
+              ))}
+              {filtered.length === 0 && (
+                <p className="text-sm text-neutral-500 text-center py-8">
+                  No orders match this filter.
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function BulkEnquiriesPanel({ onError }: { onError: (message: string) => void }) {
+  const [enquiries, setEnquiries] = useState<BulkEnquiry[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await adminFetch('/api/admin/bulk-orders');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? 'Failed to load enquiries');
+        setEnquiries(data.enquiries);
+      } catch (e) {
+        onError(e instanceof Error ? e.message : 'Failed to load enquiries');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [onError]);
+
+  const changeStatus = async (id: string, status: BulkEnquiry['status']) => {
+    const previous = enquiries;
+    setEnquiries(prev => prev.map(q => (q.id === id ? { ...q, status } : q)));
+    try {
+      await adminMutate('/api/admin/bulk-orders', 'PATCH', { id, status });
+    } catch (e) {
+      setEnquiries(previous);
+      onError(e instanceof Error ? e.message : 'Failed to update enquiry');
+    }
+  };
+
+  if (loading) {
+    return (
+      <p className="p-8 text-center text-sm text-neutral-500 bg-white rounded-xl border border-neutral-200">
+        Loading bulk enquiries...
+      </p>
+    );
+  }
+
+  if (enquiries.length === 0) {
+    return (
+      <div className="text-center py-16 bg-white rounded-xl border border-dashed border-neutral-300">
+        <p className="text-4xl mb-3">🏫</p>
+        <p className="font-medium text-neutral-900">No bulk enquiries yet</p>
+        <p className="text-sm text-neutral-500 mt-1">
+          Quote requests from the Bulk &amp; B2B Orders page will appear here.
         </p>
-      ) : orders.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-dashed border-neutral-300">
-          <p className="text-4xl mb-3">📋</p>
-          <p className="font-medium text-neutral-900">No orders yet</p>
-          <p className="text-sm text-neutral-500 mt-1">
-            Orders placed on the storefront will appear here. Place a test order via the checkout to
-            try the status pipeline.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {enquiries.map(q => (
+        <div key={q.id} className="bg-white border border-neutral-200 rounded-xl p-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex-1 min-w-[180px]">
+              <p className="text-sm font-semibold text-neutral-900">{q.organisation}</p>
+              <p className="text-xs text-neutral-500">
+                {q.contactName} · {q.email} · {q.phone}
+                {q.gstin && ` · GSTIN: ${q.gstin}`}
+              </p>
+            </div>
+            <p className="text-xs text-neutral-400">
+              {q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-IN') : ''}
+            </p>
+            <select
+              value={q.status}
+              onChange={e => changeStatus(q.id, e.target.value as BulkEnquiry['status'])}
+              className="h-9 rounded-lg border border-neutral-300 px-2 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            >
+              <option value="NEW">NEW</option>
+              <option value="CONTACTED">CONTACTED</option>
+              <option value="CLOSED">CLOSED</option>
+            </select>
+          </div>
+          <p className="mt-3 text-sm text-neutral-700 whitespace-pre-wrap bg-neutral-50 border border-neutral-200 rounded-lg p-3">
+            {q.requirements}
           </p>
         </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map(order => (
-            <AdminOrderCard
-              key={order.id}
-              order={order}
-              expanded={expanded === order.id}
-              onToggle={() => setExpanded(expanded === order.id ? null : order.id)}
-              onStatusChange={status => changeStatus(order.id, status)}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <p className="text-sm text-neutral-500 text-center py-8">No orders match your search.</p>
-          )}
-        </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -275,11 +447,13 @@ function AdminOrderCard({
   expanded,
   onToggle,
   onStatusChange,
+  onRemove,
 }: {
   order: AdminOrder;
   expanded: boolean;
   onToggle: () => void;
   onStatusChange: (status: OrderStatus) => void;
+  onRemove: () => void;
 }) {
   const itemsSubtotal = order.subtotal;
   const lowOrderCharge = order.lowOrderCharge ?? 0;
@@ -324,6 +498,14 @@ function AdminOrderCard({
           ))}
           <option value="CANCELLED">CANCELLED</option>
         </select>
+        {order.status === 'DELIVERED' && (
+          <button
+            onClick={onRemove}
+            className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 whitespace-nowrap"
+          >
+            🗑 Remove
+          </button>
+        )}
       </div>
 
       {expanded && (

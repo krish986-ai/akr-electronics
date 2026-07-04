@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { deleteHostedImage } from '@/lib/storage/cleanup';
 
 const childSchema = z.object({
   id: z.string().min(1),
@@ -27,7 +28,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const category = categorySchema.parse(await request.json());
-    await getAdminDb().collection('categories').doc(category.id).set(category);
+    const ref = getAdminDb().collection('categories').doc(category.id);
+    const existing = await ref.get();
+    const oldImage = existing.data()?.image as string | undefined;
+    await ref.set(category);
+    if (oldImage && oldImage !== category.image) {
+      await deleteHostedImage(oldImage);
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -63,6 +70,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await db.collection('categories').doc(id).delete();
+    await deleteHostedImage(doc.data()?.image as string | undefined);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });

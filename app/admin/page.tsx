@@ -2,35 +2,65 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { products, productReviews, productQuestions, coupons } from '@/lib/mock/products';
-import { useOrdersStore, STATUS_BADGE_CLASSES } from '@/lib/stores/orders';
+import { productReviews, productQuestions, coupons, Product } from '@/lib/mock/products';
+import { STATUS_BADGE_CLASSES, PlacedOrder } from '@/lib/stores/orders';
+import { getProducts } from '@/lib/data/catalog';
+import { adminFetch } from '@/lib/api/admin-client';
 
 const LOW_STOCK_THRESHOLD = 100;
 
+interface DashboardOrder extends PlacedOrder {
+  id: string;
+  archived?: boolean;
+}
+
 export default function AdminDashboard() {
-  const orders = useOrdersStore(state => state.orders);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [orders, setOrders] = useState<DashboardOrder[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    getProducts().then(setProducts);
+    (async () => {
+      try {
+        const res = await adminFetch('/api/admin/orders');
+        const data = await res.json();
+        if (res.ok) setOrders(data.orders);
+      } catch {
+        // Orders unavailable — revenue shows once signed in with Firebase
+      }
+    })();
+  }, []);
 
   const lowStock = products.filter(p => p.stock < LOW_STOCK_THRESHOLD);
   const pendingReviews = productReviews.filter(r => r.status === 'PENDING');
   const unansweredQuestions = productQuestions.filter(q => !q.answer);
   const activeCoupons = coupons.filter(c => c.active);
-  const catalogValue = products.reduce((sum, p) => sum + p.price * p.stock, 0);
+
+  const countedOrders = orders.filter(o => o.status !== 'CANCELLED');
+  const totalRevenue = countedOrders.reduce((sum, o) => sum + o.total, 0);
 
   const stats = [
+    {
+      label: 'Total Revenue',
+      value: `₹${totalRevenue.toLocaleString('en-IN')}`,
+      sub: `${countedOrders.length} order${countedOrders.length === 1 ? '' : 's'} incl. removed`,
+      icon: '💰',
+      href: '/admin/orders',
+    },
     { label: 'Products Live', value: String(products.length), sub: `${lowStock.length} low stock`, icon: '📦', href: '/admin/products' },
-    { label: 'Inventory Value', value: `₹${(catalogValue / 100000).toFixed(1)}L`, sub: 'At current prices', icon: '💰', href: '/admin/products' },
     { label: 'Pending Reviews', value: String(pendingReviews.length), sub: `${unansweredQuestions.length} open questions`, icon: '⭐', href: '/admin/reviews' },
     { label: 'Active Coupons', value: String(activeCoupons.length), sub: `${coupons.length} total`, icon: '🎟️', href: '/admin/coupons' },
   ];
 
-  const recentOrders = (mounted ? orders : []).slice(0, 5).map(o => ({
-    id: o.orderNumber,
-    customer: o.address.name,
-    amount: `₹${o.total.toLocaleString('en-IN')}`,
-    status: o.status,
-  }));
+  const recentOrders = orders
+    .filter(o => !o.archived)
+    .slice(0, 5)
+    .map(o => ({
+      id: o.orderNumber,
+      customer: o.address.name,
+      amount: `₹${o.total.toLocaleString('en-IN')}`,
+      status: o.status,
+    }));
 
   const topProducts = [...products].sort((a, b) => b.reviews - a.reviews).slice(0, 5);
 
@@ -38,7 +68,7 @@ export default function AdminDashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-neutral-500">Store overview · mock data until backend integration (Phase 17)</p>
+        <p className="text-sm text-neutral-500">Store overview · live from Firebase</p>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

@@ -3,12 +3,14 @@ import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { STANDARD_WARRANTY } from '@/lib/mock/products';
+import { imageUrlSchema } from '@/lib/validation/image-validation';
+import { deleteHostedImage } from '@/lib/storage/cleanup';
 
 const productUpdateSchema = z.object({
   name: z.string().min(2).max(200).optional(),
   slug: z.string().min(2).max(200).regex(/^[a-z0-9-]+$/).optional(),
   sku: z.string().min(2).max(50).optional(),
-  image: z.string().url().optional(),
+  image: imageUrlSchema.optional(),
   price: z.number().positive().optional(),
   originalPrice: z.number().positive().nullable().optional(),
   gstRate: z.number().min(0).max(28).optional(),
@@ -55,7 +57,11 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
       update.originalPrice = originalPrice;
     }
 
+    const oldImage = doc.data()?.image as string | undefined;
     await ref.update(update);
+    if (input.image && oldImage && input.image !== oldImage) {
+      await deleteHostedImage(oldImage);
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -76,7 +82,10 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
 
   const { id } = await props.params;
   try {
-    await getAdminDb().collection('products').doc(id).delete();
+    const ref = getAdminDb().collection('products').doc(id);
+    const doc = await ref.get();
+    await ref.delete();
+    await deleteHostedImage(doc.data()?.image as string | undefined);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });

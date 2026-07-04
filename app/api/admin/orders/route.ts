@@ -41,25 +41,36 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
-  let body: { id?: string; status?: string };
+  let body: { id?: string; status?: string; archive?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { id, status } = body;
-  if (!id || !status || !VALID_STATUSES.includes(status)) {
-    return NextResponse.json({ error: 'id and a valid status are required' }, { status: 400 });
+  const { id, status, archive } = body;
+  if (!id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
 
   try {
+    if (archive === true) {
+      await getAdminDb().collection('orders').doc(id).update({
+        archived: true,
+        archivedAt: new Date(),
+      });
+      return NextResponse.json({ ok: true, id, archived: true });
+    }
+
+    if (!status || !VALID_STATUSES.includes(status)) {
+      return NextResponse.json({ error: 'A valid status is required' }, { status: 400 });
+    }
     await getAdminDb().collection('orders').doc(id).update({
       status,
       updatedAt: new Date(),
     });
     return NextResponse.json({ ok: true, id, status });
   } catch {
-    return NextResponse.json({ error: 'Failed to update order status' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
   }
 }

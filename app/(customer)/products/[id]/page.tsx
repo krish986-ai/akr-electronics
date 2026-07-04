@@ -156,8 +156,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
           <p className="text-xs text-neutral-500">Inclusive of {product.gstRate}% GST</p>
 
-          <p className={`mt-3 text-sm font-semibold ${product.stock > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-            {product.stock > 0 ? `✓ In Stock (${product.stock} available)` : '✗ Out of Stock'}
+          <p
+            className={`mt-3 text-sm font-semibold ${
+              product.stock === 0
+                ? 'text-red-600'
+                : product.stock <= 5
+                  ? 'text-amber-600'
+                  : 'text-emerald-600'
+            }`}
+          >
+            {product.stock === 0
+              ? '✗ Out of Stock'
+              : product.stock <= 5
+                ? `⚠ Hurry — only ${product.stock} left!`
+                : `✓ In Stock (${product.stock} available)`}
           </p>
 
           <ul className="mt-4 space-y-1.5">
