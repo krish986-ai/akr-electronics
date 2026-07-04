@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { StoreShell } from '@/components/layout/store/StoreShell';
 import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
-import { PartnershipsSection } from '@/components/PartnershipsSection';
+import { PartnershipsSection, PartnershipsLogoBar } from '@/components/PartnershipsSection';
 import { iotKits, FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
 import { getProducts, getCategories } from '@/lib/data/catalog';
 
@@ -41,6 +41,8 @@ export default async function HomePage() {
     <StoreShell>
       <HeroCarousel />
 
+      <PartnershipsLogoBar />
+
       <section className="border-b border-neutral-200 bg-white">
         <div className={`${container} grid grid-cols-2 lg:grid-cols-4 gap-4 py-6`}>
           {TRUST_BADGES.map(b => (
@@ -75,6 +77,8 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <PartnershipsSection />
 
       <ProductRail title="Featured Products" items={featured} href="/products" />
       <ProductRail title="Bestsellers" items={bestsellers} href="/products" tint="bg-neutral-50" />
@@ -133,8 +137,6 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
-
-      <PartnershipsSection />
     </StoreShell>
   );
 }
