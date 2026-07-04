@@ -81,11 +81,14 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
+    console.log('[Partnerships API PATCH] Updating partnership:', body.id, 'enabled:', body.enabled);
     await getAdminDb().collection('partnerships').doc(body.id).update({
       enabled: body.enabled ?? true,
     });
+    console.log('[Partnerships API PATCH] Partnership updated successfully');
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error('[Partnerships API PATCH] Error:', error);
     return NextResponse.json({ error: 'Failed to update partnership' }, { status: 500 });
   }
 }
