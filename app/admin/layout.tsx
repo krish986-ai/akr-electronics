@@ -9,6 +9,7 @@ import { AdminGuard } from '@/components/admin/AdminGuard';
 const sidebarItems = [
   { icon: '📊', label: 'Dashboard', href: '/admin', id: 'dashboard' },
   { icon: '📋', label: 'Orders', href: '/admin/orders', id: 'orders' },
+  { icon: '💳', label: 'Payments', href: '/admin/payments', id: 'payments' },
   { icon: '📦', label: 'Products', href: '/admin/products', id: 'products' },
   { icon: '🏷️', label: 'Categories', href: '/admin/categories', id: 'categories' },
   { icon: '🏢', label: 'Brands', href: '/admin/brands', id: 'brands' },

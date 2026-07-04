@@ -9,7 +9,7 @@ export const ORDER_STATUSES = [
   'DELIVERED',
 ] as const;
 
-export type OrderStatus = (typeof ORDER_STATUSES)[number] | 'CANCELLED';
+export type OrderStatus = (typeof ORDER_STATUSES)[number] | 'PENDING' | 'CANCELLED';
 
 export interface PlacedOrderItem {
   productId: string;
@@ -42,6 +42,9 @@ export interface PlacedOrder {
   discount: number;
   total: number;
   address: ShippingAddress;
+  qrPayerName?: string;
+  qrTransactionId?: string;
+  razorpayPaymentId?: string;
 }
 
 interface OrdersState {
@@ -91,11 +94,18 @@ export function orderTimeline(status: OrderStatus): TimelineStep[] {
       { label: 'Cancelled', done: true },
     ];
   }
-  const reached = ORDER_STATUSES.indexOf(status);
+  if (status === 'PENDING') {
+    return [
+      { label: 'Payment under verification (12–48 hours)', done: true },
+      ...ORDER_STATUSES.map(s => ({ label: TIMELINE_LABELS[s], done: false })),
+    ];
+  }
+  const reached = ORDER_STATUSES.indexOf(status as (typeof ORDER_STATUSES)[number]);
   return ORDER_STATUSES.map((s, i) => ({ label: TIMELINE_LABELS[s], done: i <= reached }));
 }
 
 export const STATUS_BADGE_CLASSES: Record<string, string> = {
+  PENDING: 'bg-orange-100 text-orange-700',
   CONFIRMED: 'bg-amber-100 text-amber-700',
   PROCESSING: 'bg-blue-100 text-blue-700',
   SHIPPED: 'bg-indigo-100 text-indigo-700',

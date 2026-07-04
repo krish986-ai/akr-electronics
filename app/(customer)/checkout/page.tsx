@@ -8,15 +8,39 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { RadioGroup } from '@/components/ui/Radio';
 import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
-import { nextOrderNumber } from '@/lib/stores/orders';
+import { nextOrderNumber, PlacedOrder } from '@/lib/stores/orders';
 import { coupons, Coupon } from '@/lib/mock/products';
 import { useAuth } from '@/lib/auth/client';
 import { fetchUserProfile } from '@/lib/auth/profile';
 import { submitOrder } from '@/lib/orders/service';
 import { fetchOrderSettings } from '@/lib/orders/settings-client';
 import { OrderSettings, defaultOrderSettings } from '@/lib/orders/settings';
+import { fetchPaymentSettings } from '@/lib/payments/settings-client';
+import { PaymentSettings, defaultPaymentSettings, QR_PAYMENT_NOTE } from '@/lib/payments/settings';
+import { auth } from '@/lib/firebase/config';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
+
+interface PaymentExtras {
+  status: 'CONFIRMED' | 'PENDING';
+  paymentMethod: string;
+  qrPayerName?: string;
+  qrTransactionId?: string;
+  razorpayPaymentId?: string;
+  razorpayOrderId?: string;
+  razorpaySignature?: string;
+}
+
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise(resolve => {
+    if ((window as unknown as { Razorpay?: unknown }).Razorpay) return resolve(true);
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
@@ -50,13 +74,10 @@ export default function CheckoutPage() {
   }, [user]);
 
   const [settings, setSettings] = useState<OrderSettings>(defaultOrderSettings);
+  const [paySettings, setPaySettings] = useState<PaymentSettings>(defaultPaymentSettings);
   useEffect(() => {
-    fetchOrderSettings().then(loaded => {
-      setSettings(loaded);
-      if (!loaded.codEnabled) {
-        setPaymentMethod('upi');
-      }
-    });
+    fetchOrderSettings().then(setSettings);
+    fetchPaymentSettings().then(setPaySettings);
   }, []);
 
   const [shippingMethod, setShippingMethod] = useState('standard');
@@ -67,6 +88,22 @@ export default function CheckoutPage() {
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
   const [placedOrderId, setPlacedOrderId] = useState('');
+  const [placedPendingQr, setPlacedPendingQr] = useState(false);
+  const [qrPayerName, setQrPayerName] = useState('');
+  const [qrTransactionId, setQrTransactionId] = useState('');
+
+  const availableMethods = [
+    ...(settings.codEnabled ? ['cod'] : []),
+    ...(paySettings.razorpayEnabled ? ['razorpay'] : []),
+    ...(paySettings.qrEnabled && paySettings.qrImage ? ['qr'] : []),
+  ];
+
+  useEffect(() => {
+    if (availableMethods.length > 0 && !availableMethods.includes(paymentMethod)) {
+      setPaymentMethod(availableMethods[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.codEnabled, paySettings.razorpayEnabled, paySettings.qrEnabled]);
 
   const subtotal = cartSubtotal(items);
   const shippingCost =
@@ -108,17 +145,15 @@ export default function CheckoutPage() {
     shippingAddress.city.trim() !== '' &&
     /^[1-9][0-9]{5}$/.test(shippingAddress.pincode);
 
-  const placeOrder = async () => {
+  const placeOrder = async (extras: PaymentExtras) => {
     if (!user) return;
     const orderNumber = nextOrderNumber();
     setIsPlacing(true);
     setPlaceError('');
     try {
-      await submitOrder(user.id, {
+      const order: PlacedOrder & PaymentExtras = {
         orderNumber,
         placedAt: new Date().toISOString(),
-        status: 'CONFIRMED',
-        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase(),
         shippingMethod: shippingMethod === 'express' ? 'express' : 'standard',
         items: items.map(item => ({
           productId: item.productId,
@@ -133,8 +168,11 @@ export default function CheckoutPage() {
         discount,
         total,
         address: shippingAddress,
-      });
+        ...extras,
+      };
+      await submitOrder(user.id, order);
       setPlacedOrderId(orderNumber);
+      setPlacedPendingQr(extras.status === 'PENDING');
       clearCart();
     } catch (err) {
       setPlaceError(
@@ -146,6 +184,76 @@ export default function CheckoutPage() {
       setIsPlacing(false);
     }
   };
+
+  const payWithRazorpay = async () => {
+    if (!user || !auth?.currentUser) return;
+    setIsPlacing(true);
+    setPlaceError('');
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/payments/razorpay/order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ amount: total, receipt: `rcpt-${Date.now()}` }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Could not start the payment');
+
+      const loaded = await loadRazorpayScript();
+      if (!loaded) throw new Error('Could not load the payment window. Check your connection.');
+
+      const Razorpay = (window as unknown as { Razorpay: new (options: unknown) => { open: () => void } })
+        .Razorpay;
+      new Razorpay({
+        key: data.keyId,
+        amount: data.amount,
+        currency: data.currency,
+        order_id: data.orderId,
+        name: 'A.K.R Electronics',
+        description: 'IoT Components & Kits',
+        prefill: {
+          name: shippingAddress.name,
+          email: shippingAddress.email,
+          contact: shippingAddress.phone,
+        },
+        theme: { color: '#0066ff' },
+        handler: (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          placeOrder({
+            status: 'CONFIRMED',
+            paymentMethod: 'Razorpay (Online)',
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpayOrderId: response.razorpay_order_id,
+            razorpaySignature: response.razorpay_signature,
+          });
+        },
+        modal: { ondismiss: () => setIsPlacing(false) },
+      }).open();
+    } catch (err) {
+      setPlaceError(err instanceof Error ? err.message : 'Could not start the payment');
+      setIsPlacing(false);
+    }
+  };
+
+  const downloadQr = async () => {
+    try {
+      const res = await fetch(paySettings.qrImage);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'akr-payment-qr.png';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(paySettings.qrImage, '_blank');
+    }
+  };
+
+  const qrDetailsValid = qrPayerName.trim().length >= 2 && /^\d{12}$/.test(qrTransactionId.trim());
 
   if (!mounted || authLoading) return null;
 
@@ -179,14 +287,23 @@ export default function CheckoutPage() {
   if (placedOrderId) {
     return (
       <div className={cn(container, 'py-20 max-w-xl text-center')}>
-        <p className="text-6xl mb-4">🎉</p>
-        <h1 className="text-3xl font-bold text-neutral-900 mb-2">Order Placed!</h1>
+        <p className="text-6xl mb-4">{placedPendingQr ? '⏳' : '🎉'}</p>
+        <h1 className="text-3xl font-bold text-neutral-900 mb-2">
+          {placedPendingQr ? 'Order Received — Verifying Payment' : 'Order Placed!'}
+        </h1>
         <p className="text-neutral-600 mb-1">
           Your order number is <span className="font-mono font-bold">{placedOrderId}</span>
         </p>
         <p className="text-sm text-neutral-500 mb-2">
-          A confirmation will be sent to {shippingAddress.email}. Payment: {paymentMethod === 'cod' ? 'Cash on Delivery' : paymentMethod.toUpperCase()}.
+          A confirmation will be sent to {shippingAddress.email}.
         </p>
+        {placedPendingQr && (
+          <p className="text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg p-3 mb-2">
+            ⏳ We are verifying your UPI payment. Your order will be confirmed within{' '}
+            <strong>12 to 48 hours</strong> — no action needed from you. You can watch the status
+            on the Track Order page.
+          </p>
+        )}
         <p className="text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-8">
           📦 Your parcel will be delivered at your college — we do not deliver to home or any other place.
         </p>
@@ -384,25 +501,91 @@ export default function CheckoutPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {!settings.codEnabled && (
-                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2 mb-3">
-                    Cash on Delivery is temporarily unavailable — we are not accepting COD orders
-                    right now. Please check back later.
+                {availableMethods.length === 0 ? (
+                  <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
+                    No payment methods are available right now. Please check back later.
                   </p>
+                ) : (
+                  <RadioGroup
+                    options={[
+                      ...(settings.codEnabled ? [{ value: 'cod', label: '💵 Cash on Delivery' }] : []),
+                      ...(paySettings.razorpayEnabled
+                        ? [{ value: 'razorpay', label: '💳 Pay Online — UPI / Card / NetBanking (instant)' }]
+                        : []),
+                      ...(paySettings.qrEnabled && paySettings.qrImage
+                        ? [{ value: 'qr', label: '📱 Pay via UPI QR (manual verification, 12–48 hrs)' }]
+                        : []),
+                    ]}
+                    value={paymentMethod}
+                    onChange={setPaymentMethod}
+                  />
                 )}
-                <RadioGroup
-                  options={[
-                    ...(settings.codEnabled ? [{ value: 'cod', label: '💵 Cash on Delivery' }] : []),
-                    { value: 'upi', label: 'UPI (available after payment integration)' },
-                    { value: 'card', label: 'Credit/Debit Card (available after payment integration)' },
-                  ]}
-                  value={paymentMethod}
-                  onChange={setPaymentMethod}
-                />
-                {settings.codEnabled && paymentMethod !== 'cod' && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 mt-3">
-                    Online payments arrive with Razorpay integration (Phase 18). Use Cash on Delivery for now.
-                  </p>
+
+                {paymentMethod === 'qr' && paySettings.qrEnabled && paySettings.qrImage && (
+                  <div className="mt-4 border border-neutral-200 rounded-xl p-4 space-y-4">
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={paySettings.qrImage}
+                        alt="UPI payment QR code"
+                        className="w-40 h-40 object-contain border border-neutral-200 rounded-lg bg-white"
+                      />
+                      <div className="flex-1 space-y-2">
+                        <p className="text-sm font-semibold text-neutral-900">
+                          How to pay{paySettings.qrUpiName ? ` (UPI: ${paySettings.qrUpiName})` : ''}:
+                        </p>
+                        <ol className="text-xs text-neutral-600 space-y-1 list-decimal list-inside">
+                          <li>Scan this QR with any UPI app (GPay, PhonePe, Paytm...)</li>
+                          <li>
+                            Enter the amount manually —{' '}
+                            <strong>exactly ₹{total.toLocaleString('en-IN')}</strong> — and pay
+                          </li>
+                          <li>Copy the 12-digit transaction ID (UTR) from your UPI app</li>
+                          <li>Fill your UPI name and the transaction ID below, then confirm</li>
+                        </ol>
+                        <button
+                          type="button"
+                          onClick={downloadQr}
+                          className="text-xs font-semibold text-primary-600 border border-primary-200 rounded-lg px-3 py-1.5 hover:bg-primary-50"
+                        >
+                          ⬇ Download QR
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-neutral-900">
+                          Your name on the UPI app *
+                        </label>
+                        <Input
+                          value={qrPayerName}
+                          onChange={e => setQrPayerName(e.target.value)}
+                          placeholder="Name shown in your UPI app"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-neutral-900">
+                          12-digit Transaction ID (UTR) *
+                        </label>
+                        <Input
+                          value={qrTransactionId}
+                          onChange={e => setQrTransactionId(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                          placeholder="e.g. 405678123456"
+                        />
+                        {qrTransactionId && !/^\d{12}$/.test(qrTransactionId) && (
+                          <p className="text-[11px] text-red-600 mt-1">
+                            Transaction ID must be exactly 12 digits
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-orange-700 bg-orange-50 border border-orange-200 rounded-lg p-2.5">
+                      ⏳ <strong>Please note:</strong> {QR_PAYMENT_NOTE} Don&apos;t worry — your
+                      order is safe with us while we verify.
+                    </p>
+                  </div>
                 )}
 
                 {placeError && (
@@ -411,15 +594,52 @@ export default function CheckoutPage() {
                   </p>
                 )}
 
-                <Button
-                  size="lg"
-                  fullWidth
-                  className="mt-6"
-                  disabled={paymentMethod !== 'cod' || !settings.codEnabled || isPlacing}
-                  onClick={placeOrder}
-                >
-                  {isPlacing ? 'Placing Order...' : `Place Order - ₹${total.toLocaleString('en-IN')}`}
-                </Button>
+                {paymentMethod === 'cod' && (
+                  <Button
+                    size="lg"
+                    fullWidth
+                    className="mt-6"
+                    disabled={!settings.codEnabled || isPlacing}
+                    onClick={() => placeOrder({ status: 'CONFIRMED', paymentMethod: 'Cash on Delivery' })}
+                  >
+                    {isPlacing ? 'Placing Order...' : `Place Order - ₹${total.toLocaleString('en-IN')}`}
+                  </Button>
+                )}
+
+                {paymentMethod === 'razorpay' && (
+                  <Button
+                    size="lg"
+                    fullWidth
+                    className="mt-6"
+                    disabled={!paySettings.razorpayEnabled || isPlacing}
+                    onClick={payWithRazorpay}
+                  >
+                    {isPlacing ? 'Opening Payment...' : `Pay ₹${total.toLocaleString('en-IN')} & Place Order`}
+                  </Button>
+                )}
+
+                {paymentMethod === 'qr' && (
+                  <Button
+                    size="lg"
+                    fullWidth
+                    className="mt-6"
+                    disabled={!qrDetailsValid || isPlacing}
+                    onClick={() =>
+                      placeOrder({
+                        status: 'PENDING',
+                        paymentMethod: 'UPI QR (manual verification)',
+                        qrPayerName: qrPayerName.trim(),
+                        qrTransactionId: qrTransactionId.trim(),
+                      })
+                    }
+                  >
+                    {isPlacing
+                      ? 'Confirming Order...'
+                      : qrDetailsValid
+                        ? `Confirm Order - ₹${total.toLocaleString('en-IN')}`
+                        : 'Enter payment details to confirm'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

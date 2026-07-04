@@ -7,7 +7,7 @@ interface RadioProps extends React.InputHTMLAttributes<HTMLInputElement> {
 
 export function Radio({ label, className, ...props }: RadioProps) {
   return (
-    <div className="flex items-center gap-3">
+    <label className="flex items-center gap-3 cursor-pointer">
       <div className="relative">
         <input
           type="radio"
@@ -22,12 +22,8 @@ export function Radio({ label, className, ...props }: RadioProps) {
         />
         <div className="absolute inset-1 rounded-full bg-primary-500 hidden checked:block" />
       </div>
-      {label && (
-        <label className="text-sm font-medium">
-          {label}
-        </label>
-      )}
-    </div>
+      {label && <span className="text-sm font-medium">{label}</span>}
+    </label>
   );
 }
 

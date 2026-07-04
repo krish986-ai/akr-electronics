@@ -36,7 +36,7 @@ export default function AdminDashboard() {
   const unansweredQuestions = productQuestions.filter(q => !q.answer);
   const activeCoupons = coupons.filter(c => c.active);
 
-  const countedOrders = orders.filter(o => o.status !== 'CANCELLED');
+  const countedOrders = orders.filter(o => o.status !== 'CANCELLED' && o.status !== 'PENDING');
   const totalRevenue = countedOrders.reduce((sum, o) => sum + o.total, 0);
 
   const stats = [

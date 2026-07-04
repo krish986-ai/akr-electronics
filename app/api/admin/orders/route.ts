@@ -3,6 +3,7 @@ import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 
 const VALID_STATUSES = [
+  'PENDING',
   'CONFIRMED',
   'PROCESSING',
   'SHIPPED',
@@ -41,19 +42,39 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }
 
-  let body: { id?: string; status?: string; archive?: boolean };
+  let body: { id?: string; status?: string; archive?: boolean; reject?: boolean };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
   }
 
-  const { id, status, archive } = body;
+  const { id, status, archive, reject } = body;
   if (!id) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
 
   try {
+    if (reject === true) {
+      const db = getAdminDb();
+      await db.runTransaction(async tx => {
+        const orderRef = db.collection('orders').doc(id);
+        const orderDoc = await tx.get(orderRef);
+        if (!orderDoc.exists) throw new Error('NOT_FOUND');
+        const items = (orderDoc.data()?.items ?? []) as { productId: string; quantity: number }[];
+        const productRefs = items.map(i => db.collection('products').doc(i.productId));
+        const productDocs = await Promise.all(productRefs.map(ref => tx.get(ref)));
+        productDocs.forEach((doc, i) => {
+          if (doc.exists) {
+            const stock = (doc.data()?.stock as number) ?? 0;
+            tx.update(productRefs[i], { stock: stock + items[i].quantity });
+          }
+        });
+        tx.update(orderRef, { status: 'CANCELLED', updatedAt: new Date() });
+      });
+      return NextResponse.json({ ok: true, id, status: 'CANCELLED' });
+    }
+
     if (archive === true) {
       await getAdminDb().collection('orders').doc(id).update({
         archived: true,

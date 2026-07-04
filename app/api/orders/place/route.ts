@@ -1,3 +1,4 @@
+import { createHmac } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
@@ -14,9 +15,14 @@ const orderItemSchema = z.object({
 const placeOrderSchema = z.object({
   orderNumber: z.string().min(1).max(40),
   placedAt: z.string().min(1),
-  status: z.literal('CONFIRMED'),
-  paymentMethod: z.string().min(1).max(40),
+  status: z.enum(['CONFIRMED', 'PENDING']),
+  paymentMethod: z.string().min(1).max(60),
   shippingMethod: z.enum(['standard', 'express']),
+  qrPayerName: z.string().min(2).max(100).optional(),
+  qrTransactionId: z.string().regex(/^\d{12}$/, 'Transaction ID must be 12 digits').optional(),
+  razorpayPaymentId: z.string().max(100).optional(),
+  razorpayOrderId: z.string().max(100).optional(),
+  razorpaySignature: z.string().max(200).optional(),
   items: z.array(orderItemSchema).min(1).max(50),
   subtotal: z.number().min(0),
   shipping: z.number().min(0),
@@ -54,6 +60,57 @@ export async function POST(request: NextRequest) {
   }
 
   const db = getAdminDb();
+
+  if (order.status === 'PENDING') {
+    if (!order.qrPayerName || !order.qrTransactionId) {
+      return NextResponse.json(
+        { error: 'QR payments need your UPI name and the 12-digit transaction ID' },
+        { status: 400 }
+      );
+    }
+    const duplicate = await db
+      .collection('orders')
+      .where('qrTransactionId', '==', order.qrTransactionId)
+      .limit(1)
+      .get();
+    if (!duplicate.empty) {
+      return NextResponse.json(
+        { error: 'This transaction ID has already been used for another order' },
+        { status: 409 }
+      );
+    }
+  }
+
+  if (order.razorpayPaymentId || order.razorpayOrderId || order.razorpaySignature) {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (
+      !keySecret ||
+      !order.razorpayPaymentId ||
+      !order.razorpayOrderId ||
+      !order.razorpaySignature
+    ) {
+      return NextResponse.json({ error: 'Payment could not be verified' }, { status: 400 });
+    }
+    const expected = createHmac('sha256', keySecret)
+      .update(`${order.razorpayOrderId}|${order.razorpayPaymentId}`)
+      .digest('hex');
+    if (expected !== order.razorpaySignature) {
+      return NextResponse.json({ error: 'Payment signature verification failed' }, { status: 400 });
+    }
+    const keyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ?? '';
+    const rzpOrder = await fetch(`https://api.razorpay.com/v1/orders/${order.razorpayOrderId}`, {
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`,
+      },
+    }).then(r => (r.ok ? r.json() : null));
+    if (!rzpOrder || rzpOrder.amount !== Math.round(order.total * 100)) {
+      return NextResponse.json(
+        { error: 'Payment amount does not match the order total' },
+        { status: 400 }
+      );
+    }
+  }
+
   try {
     await db.runTransaction(async tx => {
       const productRefs = order.items.map(item => db.collection('products').doc(item.productId));

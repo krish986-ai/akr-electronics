@@ -134,7 +134,10 @@ function GuestTracker() {
       setResult({
         orderNumber: placed.orderNumber,
         email: placed.address.email,
-        status: placed.status === 'CANCELLED' ? 'CONFIRMED' : placed.status,
+        status:
+          placed.status === 'CANCELLED' || placed.status === 'PENDING'
+            ? 'CONFIRMED'
+            : placed.status,
         placedAt: new Date(placed.placedAt).toLocaleDateString('en-IN'),
         items: placed.items.map(i => ({ name: i.name, quantity: i.quantity })),
         timeline: orderTimeline(placed.status).map(step => ({
