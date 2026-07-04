@@ -46,6 +46,12 @@ prisma/dev.db-journal
 logs/
 *.log
 
+# Dev-only local image uploads (production uses Firestore-backed storage)
+/public/uploads/
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
 .env
 .env.local
 .env.production
