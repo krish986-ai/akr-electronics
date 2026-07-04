@@ -184,63 +184,94 @@ function PartnershipsContent() {
           </div>
 
           {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="h-11 px-8 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
-            >
-              + Add Partnership
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setFormData({
+                    name: 'Engorio',
+                    logo: 'https://engorio-91f5c.web.app/logo.png',
+                    link: 'https://engorio-91f5c.web.app',
+                    banner: 'https://engorio-91f5c.web.app/banner.png',
+                    description: 'Complete IoT project guides, tutorials, and free resources. Learn how to build IoT projects with step-by-step guides, free reports, presentations, and code upload guides without installing heavy software.',
+                    enabled: true,
+                  });
+                  setShowForm(true);
+                }}
+                className="h-11 px-8 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
+              >
+                + Add Engorio
+              </button>
+              <button
+                onClick={() => setShowForm(true)}
+                className="h-11 px-8 rounded-lg border border-neutral-300 text-neutral-600 font-semibold hover:bg-neutral-50"
+              >
+                + Custom Partnership
+              </button>
+            </div>
           )}
 
           {showForm && (
             <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
-              <h3 className="font-semibold text-neutral-900">Add New Partnership</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-neutral-900">Add Partnership</h3>
+                {formData.name && (
+                  <button
+                    onClick={() => {
+                      setFormData({ name: '', logo: '', link: '', banner: '', description: '', enabled: true });
+                      setShowForm(false);
+                    }}
+                    className="text-xs text-neutral-500 hover:text-neutral-700"
+                  >
+                    Clear Form
+                  </button>
+                )}
+              </div>
 
-              <Field label="Partnership Name">
+              <Field label="Partnership Name (e.g., Engorio)">
                 <input
                   type="text"
                   className={inputCls}
-                  placeholder="e.g., Engorio"
+                  placeholder="Partnership name"
                   value={formData.name}
                   onChange={e => setFormData(prev => ({ ...prev, name: e.target.value }))}
                 />
               </Field>
 
-              <Field label="Logo URL">
+              <Field label="Logo URL (Square image, min 200x200px)">
                 <input
                   type="url"
                   className={inputCls}
-                  placeholder="https://example.com/logo.png"
+                  placeholder="https://engorio-91f5c.web.app/logo.png"
                   value={formData.logo}
                   onChange={e => setFormData(prev => ({ ...prev, logo: e.target.value }))}
                 />
               </Field>
 
-              <Field label="Partnership Link">
+              <Field label="Partnership Website URL">
                 <input
                   type="url"
                   className={inputCls}
-                  placeholder="https://engorio-915fc.web.app"
+                  placeholder="https://engorio-91f5c.web.app"
                   value={formData.link}
                   onChange={e => setFormData(prev => ({ ...prev, link: e.target.value }))}
                 />
               </Field>
 
-              <Field label="Banner Image URL">
+              <Field label="Banner Image URL (1200x300px recommended)">
                 <input
                   type="url"
                   className={inputCls}
-                  placeholder="https://example.com/banner.png"
+                  placeholder="https://engorio-91f5c.web.app/banner.png"
                   value={formData.banner}
                   onChange={e => setFormData(prev => ({ ...prev, banner: e.target.value }))}
                 />
               </Field>
 
-              <Field label="Description">
+              <Field label="Description (What does this partnership offer?)">
                 <textarea
-                  rows={3}
+                  rows={4}
                   className={inputCls}
-                  placeholder="e.g., Complete IoT project guides, free reports, presentations, and coding tutorials"
+                  placeholder="Complete IoT project guides, tutorials, and free resources. Learn how to build IoT projects with step-by-step guides, free reports, presentations, and code upload guides without installing heavy software."
                   value={formData.description}
                   onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 />
