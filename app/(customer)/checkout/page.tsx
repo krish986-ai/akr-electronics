@@ -216,6 +216,23 @@ export default function CheckoutPage() {
           email: shippingAddress.email,
           contact: shippingAddress.phone,
         },
+        method: { upi: true, card: true, netbanking: true, wallet: true },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: 'Pay via UPI',
+                instruments: [{ method: 'upi' }],
+              },
+              other: {
+                name: 'Cards, NetBanking & Wallets',
+                instruments: [{ method: 'card' }, { method: 'netbanking' }, { method: 'wallet' }],
+              },
+            },
+            sequence: ['block.upi', 'block.other'],
+            preferences: { show_default_blocks: false },
+          },
+        },
         theme: { color: '#0066ff' },
         handler: (response: {
           razorpay_payment_id: string;
