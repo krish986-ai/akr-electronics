@@ -27,7 +27,7 @@ interface BulkEnquiry {
   createdAt: string;
 }
 
-const STATUS_FILTERS = ['ALL', ...ORDER_STATUSES, 'CANCELLED'] as const;
+const STATUS_FILTERS = ['ALL', ...ORDER_STATUSES, 'CANCELLED', 'REMOVED'] as const;
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -82,11 +82,27 @@ export default function AdminOrdersPage() {
     }
   };
 
+  const deleteForever = async (order: AdminOrder) => {
+    const password = window.prompt(
+      `⚠ PERMANENT DELETE — ${order.orderNumber}\n\nThis removes the order completely: from this list, the dashboard revenue, and the customer's account. It cannot be undone.\n\nEnter the admin action password to continue:`
+    );
+    if (password === null) return;
+    setError('');
+    try {
+      await adminMutate('/api/admin/orders', 'DELETE', { id: order.id, password });
+      setOrders(prev => prev.filter(o => o.id !== order.id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete order');
+    }
+  };
+
   const visible = orders.filter(o => !o.archived && o.status !== 'PENDING');
+  const archivedOrders = orders.filter(o => o.archived);
   const pendingCount = orders.filter(o => !o.archived && o.status === 'PENDING').length;
-  const filtered = visible.filter(
+  const pool = statusFilter === 'REMOVED' ? archivedOrders : visible;
+  const filtered = pool.filter(
     o =>
-      (statusFilter === 'ALL' || o.status === statusFilter) &&
+      (statusFilter === 'ALL' || statusFilter === 'REMOVED' || o.status === statusFilter) &&
       (o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
         o.address.name.toLowerCase().includes(search.toLowerCase()) ||
         o.address.email.toLowerCase().includes(search.toLowerCase()))
@@ -161,9 +177,13 @@ export default function AdminOrdersPage() {
                     : 'bg-white border border-neutral-300 text-neutral-600 hover:bg-neutral-50'
                 }`}
               >
-                {s === 'ALL' ? 'All' : s.replace(/_/g, ' ')}
+                {s === 'ALL' ? 'All' : s === 'REMOVED' ? '🗂 Removed' : s.replace(/_/g, ' ')}
                 {s !== 'ALL' && (
-                  <span className="ml-1 opacity-60">{visible.filter(o => o.status === s).length}</span>
+                  <span className="ml-1 opacity-60">
+                    {s === 'REMOVED'
+                      ? archivedOrders.length
+                      : visible.filter(o => o.status === s).length}
+                  </span>
                 )}
               </button>
             ))}
@@ -192,6 +212,7 @@ export default function AdminOrdersPage() {
                   onToggle={() => setExpanded(expanded === order.id ? null : order.id)}
                   onStatusChange={status => changeStatus(order.id, status)}
                   onRemove={() => removeOrder(order)}
+                  onDeleteForever={() => deleteForever(order)}
                 />
               ))}
               {filtered.length === 0 && (
@@ -297,12 +318,14 @@ function AdminOrderCard({
   onToggle,
   onStatusChange,
   onRemove,
+  onDeleteForever,
 }: {
   order: AdminOrder;
   expanded: boolean;
   onToggle: () => void;
   onStatusChange: (status: OrderStatus) => void;
   onRemove: () => void;
+  onDeleteForever: () => void;
 }) {
   const itemsSubtotal = order.subtotal;
   const lowOrderCharge = order.lowOrderCharge ?? 0;
@@ -347,7 +370,7 @@ function AdminOrderCard({
           ))}
           <option value="CANCELLED">CANCELLED</option>
         </select>
-        {order.status === 'DELIVERED' && (
+        {order.status === 'DELIVERED' && !order.archived && (
           <button
             onClick={onRemove}
             className="h-9 px-3 rounded-lg border border-red-200 text-red-600 text-xs font-semibold hover:bg-red-50 whitespace-nowrap"
@@ -355,6 +378,13 @@ function AdminOrderCard({
             🗑 Remove
           </button>
         )}
+        <button
+          onClick={onDeleteForever}
+          title="Permanently delete this order from everywhere (password required)"
+          className="h-9 px-3 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 whitespace-nowrap"
+        >
+          ✕ Delete Forever
+        </button>
       </div>
 
       {expanded && (

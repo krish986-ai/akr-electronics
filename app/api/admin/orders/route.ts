@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { ADMIN_ACTION_PASSWORD } from '@/lib/auth/admin-password';
 
 const VALID_STATUSES = [
   'PENDING',
@@ -93,5 +94,36 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ ok: true, id, status });
   } catch {
     return NextResponse.json({ error: 'Failed to update order' }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const check = await verifyAdminRequest(request);
+  if (!check.ok) {
+    return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+
+  let body: { id?: string; password?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+  }
+
+  if (!body.id) {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 });
+  }
+  if (body.password !== ADMIN_ACTION_PASSWORD) {
+    return NextResponse.json(
+      { error: 'Permanently deleting an order requires the admin action password' },
+      { status: 403 }
+    );
+  }
+
+  try {
+    await getAdminDb().collection('orders').doc(body.id).delete();
+    return NextResponse.json({ ok: true, id: body.id, deleted: true });
+  } catch {
+    return NextResponse.json({ error: 'Failed to delete order' }, { status: 500 });
   }
 }
