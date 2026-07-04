@@ -85,8 +85,9 @@ export function StoreHeader() {
             <div className="hidden sm:block">
               {/* PARTNER ACTIVE: Show only partner branding with animation */}
               {partner && (
-                <div
-                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2"
+                <button
+                  onClick={() => window.open(partner.link, '_blank')}
+                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2 hover:opacity-80 cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
                     {/* Partner Logo - animated pulse */}
@@ -113,7 +114,7 @@ export function StoreHeader() {
                       </p>
                     </div>
                   </div>
-                </div>
+                </button>
               )}
 
               {/* NO PARTNER: Show AKR branding (default) */}
