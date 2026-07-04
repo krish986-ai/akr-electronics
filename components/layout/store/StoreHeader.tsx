@@ -27,7 +27,6 @@ export function StoreHeader() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [partner, setPartner] = useState<Partnership | null>(null);
-  const [showPartner, setShowPartner] = useState(false);
 
   useEffect(() => {
     const loadPartner = async () => {
@@ -43,11 +42,9 @@ export function StoreHeader() {
           setPartner(data.partnerships[0]);
         } else {
           setPartner(null);
-          setShowPartner(false);
         }
       } catch {
         setPartner(null);
-        setShowPartner(false);
       }
     };
 
@@ -55,21 +52,6 @@ export function StoreHeader() {
     const interval = setInterval(loadPartner, 5000);
     return () => clearInterval(interval);
   }, []);
-
-  // Continuous animation loop when partner exists
-  useEffect(() => {
-    if (!partner) {
-      setShowPartner(false);
-      return;
-    }
-
-    // Start animation loop: show partner for 4s, show AKR for 4s
-    const animationInterval = setInterval(() => {
-      setShowPartner(prev => !prev);
-    }, 4000);
-
-    return () => clearInterval(animationInterval);
-  }, [partner]);
 
   const submitSearch = (term: string) => {
     setShowSuggestions(false);
@@ -99,34 +81,48 @@ export function StoreHeader() {
               className="h-9 w-auto rounded-lg shadow-sm"
             />
 
-            {/* Text and Partner Section - continuous animation loop */}
+            {/* Text and Partner Section */}
             <div className="hidden sm:block">
-              {/* Show AKR or Partner - animate between them */}
-              {(!partner || !showPartner) && (
-                <div className="transition-all duration-500 ease-in-out">
-                  <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
-                  <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
+              {/* PARTNER ACTIVE: Show only partner branding with animation */}
+              {partner && (
+                <div
+                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2"
+                >
+                  <div className="flex items-center gap-2.5">
+                    {/* Partner Logo - animated pulse */}
+                    <div className="relative">
+                      <div className="w-7 h-7 rounded-lg overflow-hidden border-2 border-primary-300 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary-50 to-white shadow-md">
+                        <img
+                          src={partner.logo}
+                          alt={partner.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                      {/* Glow effect */}
+                      <div className="absolute inset-0 rounded-lg bg-primary-400 opacity-0 blur-md -z-10 animate-pulse"></div>
+                    </div>
+
+                    {/* Partner Info */}
+                    <div>
+                      <p className="font-bold text-neutral-900 leading-tight text-sm">{partner.name}</p>
+                      <p className="text-[10px] text-primary-600 font-semibold leading-tight">
+                        Featured Partner ✨
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {partner && showPartner && (
-                <div className="transition-all duration-500 ease-in-out">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded overflow-hidden border border-primary-200 flex-shrink-0 flex items-center justify-center bg-white">
-                      <img
-                        src={partner.logo}
-                        alt={partner.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    </div>
-                    <span className="font-bold text-neutral-900 leading-tight text-sm">{partner.name}</span>
-                  </div>
-                  <span className="block text-[10px] text-primary-600 font-medium leading-tight">
-                    Featured Partner
-                  </span>
+              {/* NO PARTNER: Show AKR branding (default) */}
+              {!partner && (
+                <div
+                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2"
+                >
+                  <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
+                  <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
                 </div>
               )}
             </div>
