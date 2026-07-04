@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { StoreShell } from '@/components/layout/store/StoreShell';
 import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
+import { PartnershipsSection } from '@/components/PartnershipsSection';
 import { iotKits, FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
 import { getProducts, getCategories } from '@/lib/data/catalog';
 
@@ -132,6 +133,8 @@ export default async function HomePage() {
           ))}
         </div>
       </section>
+
+      <PartnershipsSection />
     </StoreShell>
   );
 }
