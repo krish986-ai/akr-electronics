@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { adminMutate } from '@/lib/api/admin-client';
 import { CreatorGuard } from '@/components/admin/CreatorGuard';
 
@@ -52,10 +53,26 @@ function CreatorPanelContent() {
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">Creator Panel</h1>
-        <p className="text-sm text-neutral-500">Manage creator-only settings and security</p>
+        <p className="text-sm text-neutral-500">Manage creator-only settings, security, and partnerships</p>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Link
+          href="/admin/creator/partnerships"
+          className="bg-white border border-neutral-200 rounded-xl p-6 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+        >
+          <p className="text-2xl mb-2">🤝</p>
+          <p className="font-semibold text-neutral-900">Partnerships</p>
+          <p className="text-xs text-neutral-500 mt-1">Manage partnerships and promotions</p>
+        </Link>
+        <div className="bg-white border border-neutral-200 rounded-xl p-6">
+          <p className="text-2xl mb-2">🔐</p>
+          <p className="font-semibold text-neutral-900">Security</p>
+          <p className="text-xs text-neutral-500 mt-1">Change payment settings password</p>
+        </div>
       </div>
 
       {success && (
