@@ -83,10 +83,11 @@ export default function AdminOrdersPage() {
   };
 
   const deleteForever = async (order: AdminOrder) => {
-    const w = typeof window !== 'undefined' ? (window as any) : null;
-    const password = w?.prompt?.(
-      `⚠ PERMANENT DELETE — ${order.orderNumber}\n\nThis removes the order completely: from this list, the dashboard revenue, and the customer's account. It cannot be undone.\n\nEnter the admin action password to continue:`
-    ) ?? null;
+    const password = typeof window !== 'undefined'
+      ? (window as any).prompt(
+          `⚠ PERMANENT DELETE — ${order.orderNumber}\n\nThis removes the order completely: from this list, the dashboard revenue, and the customer's account. It cannot be undone.\n\nEnter the admin action password to continue:`
+        )
+      : null;
     if (password === null) return;
     setError('');
     try {
