@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { verifyCreatorRequest } from '@/lib/auth/admin-guard';
 import { ADMIN_ACTION_PASSWORD } from '@/lib/auth/admin-password';
 
 export async function PUT(request: NextRequest) {
-  const check = await verifyAdminRequest(request);
+  const check = await verifyCreatorRequest(request);
   if (!check.ok) {
     return NextResponse.json({ error: check.error }, { status: check.status });
   }

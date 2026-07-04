@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { AdminGuard } from '@/components/admin/AdminGuard';
+import { useAuth } from '@/lib/auth/client';
 
-const sidebarItems = [
+const baseSidebarItems = [
   { icon: '📊', label: 'Dashboard', href: '/admin', id: 'dashboard' },
   { icon: '📋', label: 'Orders', href: '/admin/orders', id: 'orders' },
   { icon: '💳', label: 'Payments', href: '/admin/payments', id: 'payments' },
@@ -18,13 +19,17 @@ const sidebarItems = [
   { icon: '👥', label: 'Customers', href: '/admin/customers', id: 'customers' },
   { icon: '⭐', label: 'Reviews & QnA', href: '/admin/reviews', id: 'reviews' },
   { icon: '⚙️', label: 'Settings', href: '/admin/settings', id: 'settings' },
-  { icon: '👤', label: 'Creator', href: '/admin/creator', id: 'creator' },
 ];
+
+const creatorSidebarItem = { icon: '👤', label: 'Creator', href: '/admin/creator', id: 'creator' };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const pathname = usePathname();
+  const { user } = useAuth();
+  const isCreator = user?.email === 'smart@gmail.com';
+  const sidebarItems = isCreator ? [...baseSidebarItems, creatorSidebarItem] : baseSidebarItems;
 
   const isActive = (href: string) =>
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);

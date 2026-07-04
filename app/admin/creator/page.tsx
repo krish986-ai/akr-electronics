@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { adminMutate } from '@/lib/api/admin-client';
+import { CreatorGuard } from '@/components/admin/CreatorGuard';
 
-export default function CreatorPanelPage() {
+function CreatorPanelContent() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -125,5 +126,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <label className="block text-xs font-medium text-neutral-600 mb-1">{label}</label>
       {children}
     </div>
+  );
+}
+
+export default function CreatorPanelPage() {
+  return (
+    <CreatorGuard>
+      <CreatorPanelContent />
+    </CreatorGuard>
   );
 }
