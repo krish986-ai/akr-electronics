@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const COLUMNS = [
@@ -39,9 +39,39 @@ const COLUMNS = [
   },
 ];
 
+const DEFAULT_PHONE = '1800 123 4567';
+
 export function StoreFooter() {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [phone, setPhone] = useState(DEFAULT_PHONE);
+
+  useEffect(() => {
+    const loadPhone = async () => {
+      try {
+        console.log('[StoreFooter] Loading phone number...');
+        const res = await fetch('/api/admin/settings', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+          },
+        });
+        const data = await res.json();
+        console.log('[StoreFooter] Phone loaded:', data.supportPhone);
+
+        if (res.ok && data.supportPhone) {
+          setPhone(data.supportPhone);
+        }
+      } catch (e) {
+        console.error('[StoreFooter] Error:', e);
+      }
+    };
+
+    loadPhone();
+    // Refresh every 10 seconds to show live updates
+    const interval = setInterval(loadPhone, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <footer className="bg-neutral-900 text-neutral-300 mt-16">
@@ -93,8 +123,8 @@ export function StoreFooter() {
           </p>
           <p className="text-sm">
             <span className="block text-neutral-400">Got questions? Call us</span>
-            <a href="tel:18001234567" className="text-white font-semibold hover:text-primary-400">
-              1800 123 4567
+            <a href={`tel:${phone.replace(/\D/g, '')}`} className="text-white font-semibold hover:text-primary-400">
+              {phone}
             </a>
             <span className="block text-xs text-neutral-500 mt-1">Mon–Sat, 9:30 AM – 6:30 PM</span>
           </p>
