@@ -18,6 +18,7 @@ const sidebarItems = [
   { icon: '👥', label: 'Customers', href: '/admin/customers', id: 'customers' },
   { icon: '⭐', label: 'Reviews & QnA', href: '/admin/reviews', id: 'reviews' },
   { icon: '⚙️', label: 'Settings', href: '/admin/settings', id: 'settings' },
+  { icon: '👤', label: 'Creator', href: '/admin/creator', id: 'creator' },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
