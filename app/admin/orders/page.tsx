@@ -1,7 +1,5 @@
 'use client';
 
-declare const window: any;
-
 import { useEffect, useState } from 'react';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import {
@@ -85,11 +83,13 @@ export default function AdminOrdersPage() {
   };
 
   const deleteForever = async (order: AdminOrder) => {
-    const password = typeof window !== 'undefined'
-      ? window.prompt(
-          `⚠ PERMANENT DELETE — ${order.orderNumber}\n\nThis removes the order completely: from this list, the dashboard revenue, and the customer's account. It cannot be undone.\n\nEnter the admin action password to continue:`
-        )
-      : null;
+    const getPassword = () => {
+      if (typeof window === 'undefined') return null;
+      return (window as any).prompt(
+        `⚠ PERMANENT DELETE — ${order.orderNumber}\n\nThis removes the order completely: from this list, the dashboard revenue, and the customer's account. It cannot be undone.\n\nEnter the admin action password to continue:`
+      );
+    };
+    const password = getPassword();
     if (password === null) return;
     setError('');
     try {
