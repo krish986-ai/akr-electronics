@@ -72,62 +72,65 @@ export function StoreHeader() {
             ☰
           </button>
 
-          <Link href="/" className="flex items-center gap-2.5 shrink-0 relative">
-            {/* AKR Logo - always shown */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/images/logo-mark.png"
-              alt="A.K.R Electronics"
-              className="h-9 w-auto rounded-lg shadow-sm"
-            />
+          <div className="flex items-center gap-2.5 shrink-0 relative">
+            <Link href="/" className="flex items-center gap-2.5">
+              {/* AKR Logo - always shown */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/logo-mark.png"
+                alt="A.K.R Electronics"
+                className="h-9 w-auto rounded-lg shadow-sm"
+              />
+            </Link>
 
             {/* Text and Partner Section */}
             <div className="hidden sm:block">
               {/* PARTNER ACTIVE: Show only partner branding with animation */}
               {partner && (
                 <button
-                  onClick={() => window.open(partner.link, '_blank')}
-                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2 hover:opacity-80 cursor-pointer"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.open(partner.link, '_blank');
+                  }}
+                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2 hover:opacity-80 cursor-pointer flex items-center gap-2.5"
                 >
-                  <div className="flex items-center gap-2.5">
-                    {/* Partner Logo - animated pulse */}
-                    <div className="relative">
-                      <div className="w-7 h-7 rounded-lg overflow-hidden border-2 border-primary-300 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary-50 to-white shadow-md">
-                        <img
-                          src={partner.logo}
-                          alt={partner.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = 'none';
-                          }}
-                        />
-                      </div>
-                      {/* Glow effect */}
-                      <div className="absolute inset-0 rounded-lg bg-primary-400 opacity-0 blur-md -z-10 animate-pulse"></div>
+                  {/* Partner Logo - animated pulse */}
+                  <div className="relative">
+                    <div className="w-7 h-7 rounded-lg overflow-hidden border-2 border-primary-300 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary-50 to-white shadow-md">
+                      <img
+                        src={partner.logo}
+                        alt={partner.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
                     </div>
+                    {/* Glow effect */}
+                    <div className="absolute inset-0 rounded-lg bg-primary-400 opacity-0 blur-md -z-10 animate-pulse"></div>
+                  </div>
 
-                    {/* Partner Info */}
-                    <div>
-                      <p className="font-bold text-neutral-900 leading-tight text-sm">{partner.name}</p>
-                      <p className="text-[10px] text-primary-600 font-semibold leading-tight">
-                        Featured Partner ✨
-                      </p>
-                    </div>
+                  {/* Partner Info */}
+                  <div>
+                    <p className="font-bold text-neutral-900 leading-tight text-sm">{partner.name}</p>
+                    <p className="text-[10px] text-primary-600 font-semibold leading-tight">
+                      Featured Partner ✨
+                    </p>
                   </div>
                 </button>
               )}
 
               {/* NO PARTNER: Show AKR branding (default) */}
               {!partner && (
-                <div
-                  className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2"
-                >
+                <Link href="/" className="transition-all duration-700 ease-in-out animate-in fade-in slide-in-from-bottom-2">
                   <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
                   <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
-                </div>
+                </Link>
               )}
             </div>
-          </Link>
+          </div>
 
           <div className="relative flex-1 max-w-2xl hidden sm:block">
             <form
