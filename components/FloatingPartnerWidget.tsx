@@ -113,9 +113,9 @@ export function FloatingPartnerWidget() {
 
         {/* Hover Details Card - Shows on Hover */}
         {hovering && (
-          <div className={`absolute -left-80 -top-4 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 w-80 z-50 transition-opacity max-h-72 flex flex-col ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            {/* Mini Banner */}
-            <div className="h-16 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
+          <div className={`absolute -left-96 -top-8 bg-white rounded-xl shadow-2xl border border-primary-200 overflow-hidden animate-in fade-in slide-in-from-right-2 duration-300 w-96 z-50 transition-opacity flex flex-col ${hovering ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {/* Banner - Full Width */}
+            <div className="h-24 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
               <img
                 src={partner.banner}
                 alt={partner.name}
@@ -126,11 +126,11 @@ export function FloatingPartnerWidget() {
               />
             </div>
 
-            {/* Details */}
-            <div className="p-3 space-y-2 flex flex-col flex-1">
+            {/* Details Section */}
+            <div className="p-5 space-y-4 flex flex-col">
               {/* Logo and Name */}
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-lg border border-primary-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-lg border-2 border-primary-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-md">
                   <img
                     src={partner.logo}
                     alt={partner.name}
@@ -140,22 +140,24 @@ export function FloatingPartnerWidget() {
                     }}
                   />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm text-neutral-900 truncate">{partner.name}</p>
-                  <p className="text-[9px] text-primary-600 font-semibold">Featured Partner</p>
+                <div className="flex-1">
+                  <p className="font-bold text-lg text-neutral-900">{partner.name}</p>
+                  <p className="text-xs text-primary-600 font-semibold mt-0.5">✨ Featured Partner</p>
                 </div>
               </div>
 
               {/* Description */}
-              <p className="text-xs text-neutral-600 leading-tight line-clamp-2 flex-1">
+              <p className="text-sm text-neutral-600 leading-relaxed line-clamp-3">
                 {partner.description}
               </p>
 
-              {/* CTA */}
-              <p className="text-[9px] text-primary-600 font-semibold flex items-center gap-1 pt-1">
-                <span>Click logo to visit</span>
-                <span>→</span>
-              </p>
+              {/* CTA Button Style */}
+              <div className="pt-2 border-t border-primary-100">
+                <p className="text-xs text-primary-600 font-bold flex items-center gap-2">
+                  <span className="text-sm">👉</span>
+                  <span>Click logo to visit website</span>
+                </p>
+              </div>
             </div>
           </div>
         )}
