@@ -8,6 +8,13 @@ import { useCartStore, cartCount } from '@/lib/stores/cart';
 
 const SEARCH_SUGGESTIONS = ['Arduino Uno R3', 'ESP32', 'Raspberry Pi 4', 'how to build a robot'];
 
+interface Partnership {
+  id: string;
+  name: string;
+  logo: string;
+  link: string;
+}
+
 export function StoreHeader() {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
@@ -19,6 +26,32 @@ export function StoreHeader() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [partner, setPartner] = useState<Partnership | null>(null);
+
+  useEffect(() => {
+    const loadPartner = async () => {
+      try {
+        const res = await fetch('/api/partnerships', {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-store, max-age=0',
+          },
+        });
+        const data = await res.json();
+        if (res.ok && data.partnerships && data.partnerships.length > 0) {
+          setPartner(data.partnerships[0]);
+        } else {
+          setPartner(null);
+        }
+      } catch {
+        setPartner(null);
+      }
+    };
+
+    loadPartner();
+    const interval = setInterval(loadPartner, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   const submitSearch = (term: string) => {
     setShowSuggestions(false);
@@ -39,17 +72,57 @@ export function StoreHeader() {
             ☰
           </button>
 
-          <Link href="/" className="flex items-center gap-2.5 shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0 relative">
+            {/* AKR Logo - always shown */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/images/logo-mark.png"
               alt="A.K.R Electronics"
               className="h-9 w-auto rounded-lg shadow-sm"
             />
-            <span className="hidden sm:block">
-              <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
-              <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
-            </span>
+
+            {/* Text and Partner Section */}
+            <div className="hidden sm:flex flex-col gap-1 relative overflow-hidden">
+              {/* AKR Text - fades out when partner is active */}
+              <div
+                className={`absolute transition-all duration-500 ease-in-out ${
+                  partner ? 'opacity-0 -translate-y-full' : 'opacity-100 translate-y-0'
+                }`}
+              >
+                <span className="block font-bold text-neutral-900 leading-tight">A.K.R Electronics</span>
+                <span className="block text-[10px] text-neutral-500 leading-tight">IoT Components & Kits</span>
+              </div>
+
+              {/* Partner Info - fades in when active */}
+              <div
+                className={`transition-all duration-500 ease-in-out ${
+                  partner
+                    ? 'opacity-100 translate-y-0'
+                    : 'opacity-0 translate-y-full absolute'
+                }`}
+              >
+                {partner && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded overflow-hidden border border-primary-200 flex-shrink-0 flex items-center justify-center bg-white">
+                        <img
+                          src={partner.logo}
+                          alt={partner.name}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
+                      <span className="font-bold text-neutral-900 leading-tight text-sm">{partner.name}</span>
+                    </div>
+                    <span className="block text-[10px] text-primary-600 font-medium leading-tight">
+                      Featured Partner
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
           </Link>
 
           <div className="relative flex-1 max-w-2xl hidden sm:block">
