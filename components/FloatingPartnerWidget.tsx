@@ -30,6 +30,8 @@ export function FloatingPartnerWidget() {
         const data = await res.json();
 
         if (res.ok && data.partnerships && data.partnerships.length > 0) {
+          console.log('[FloatingWidget] Partner loaded:', data.partnerships[0]);
+          console.log('[FloatingWidget] Partner link:', data.partnerships[0].link);
           setPartner(data.partnerships[0]);
         }
       } catch (e) {
@@ -138,6 +140,13 @@ export function FloatingPartnerWidget() {
                 href={partner.link}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => {
+                  console.log('[FloatingWidget] Link clicked:', partner.link);
+                  if (!partner.link) {
+                    console.error('[FloatingWidget] No link available!');
+                    e.preventDefault();
+                  }
+                }}
                 className="text-xs text-primary-600 font-bold hover:text-primary-700 hover:underline flex items-center gap-2 transition-colors"
               >
                 <span className="text-sm">→</span>
