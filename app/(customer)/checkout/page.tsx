@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { RadioGroup } from '@/components/ui/Radio';
-import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
+import { useCartStore, cartSubtotal } from '@/lib/stores/cart';
 import { nextOrderNumber, PlacedOrder } from '@/lib/stores/orders';
 import { coupons, Coupon } from '@/lib/mock/products';
 import { useAuth } from '@/lib/auth/client';
@@ -75,21 +75,10 @@ export default function CheckoutPage() {
 
   const [settings, setSettings] = useState<OrderSettings>(defaultOrderSettings);
   const [paySettings, setPaySettings] = useState<PaymentSettings>(defaultPaymentSettings);
-  const [storeConfig, setStoreConfig] = useState({
-    freeDeliveryThreshold: 999,
-    deliveryCharges: 50,
-  });
 
   useEffect(() => {
     fetchOrderSettings().then(setSettings);
     fetchPaymentSettings().then(setPaySettings);
-    fetch('/api/public/settings', { cache: 'no-store' })
-      .then(r => r.json())
-      .then(data => setStoreConfig({
-        freeDeliveryThreshold: data.freeDeliveryThreshold || 999,
-        deliveryCharges: data.deliveryCharges || 50,
-      }))
-      .catch(console.error);
   }, []);
 
   const [shippingMethod, setShippingMethod] = useState('standard');
@@ -118,15 +107,14 @@ export default function CheckoutPage() {
   }, [settings.codEnabled, paySettings.razorpayEnabled, paySettings.qrEnabled]);
 
   const subtotal = cartSubtotal(items);
-  const shippingCost =
-    shippingMethod === 'express' ? settings.fastDeliveryCharge :
-    (subtotal >= storeConfig.freeDeliveryThreshold ? 0 : storeConfig.deliveryCharges);
+  const shippingCost = shippingMethod === 'express' ? settings.fastDeliveryCharge : 0;
+  const lowOrderCharge = subtotal < settings.minOrderAmount ? settings.lowOrderCharge : 0;
   const discount = appliedCoupon
     ? appliedCoupon.type === 'PERCENT'
       ? Math.round((subtotal * appliedCoupon.value) / 100)
       : appliedCoupon.value
     : 0;
-  const total = Math.max(0, subtotal + shippingCost - discount);
+  const total = Math.max(0, subtotal + shippingCost + lowOrderCharge - discount);
 
   const handleApplyCoupon = () => {
     const found = coupons.find(c => c.code === coupon.trim().toUpperCase() && c.active);
@@ -175,6 +163,7 @@ export default function CheckoutPage() {
         })),
         subtotal,
         shipping: shippingCost,
+        lowOrderCharge,
         discount,
         total,
         address: shippingAddress,

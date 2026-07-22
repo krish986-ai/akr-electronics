@@ -13,8 +13,6 @@ export async function GET() {
       supportEmail: data?.supportEmail || 'support@akrelectronics.com',
       storeName: data?.storeName || 'A.K.R Electronics',
       announcement: data?.announcement || '',
-      freeDeliveryThreshold: data?.freeDeliveryThreshold || 999,
-      deliveryCharges: data?.deliveryCharges || 50,
     });
 
     // No cache - always fresh
@@ -27,8 +25,6 @@ export async function GET() {
       supportEmail: 'support@akrelectronics.com',
       storeName: 'A.K.R Electronics',
       announcement: '',
-      freeDeliveryThreshold: 999,
-      deliveryCharges: 50,
     });
     response.headers.set('Cache-Control', 'no-store, max-age=0');
     return response;

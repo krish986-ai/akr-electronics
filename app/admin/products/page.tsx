@@ -1,10 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getProducts } from '@/lib/data/catalog';
+import { getProducts, getCategories, getBrands } from '@/lib/data/catalog';
 import { adminMutate } from '@/lib/api/admin-client';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
-import { Product, categoryTree, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
+import { Brand, CategoryNode, Product, categoryTree, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
 
 interface EditorState {
   id?: string;
@@ -34,8 +34,8 @@ const EMPTY_EDITOR: EditorState = {
   image: '',
   price: '',
   originalPrice: '',
-  categorySlug: categoryTree[0].slug,
-  brandSlug: brands[0].slug,
+  categorySlug: '',
+  brandSlug: '',
   description: '',
   stock: '0',
   countryOfOrigin: 'India',
@@ -72,9 +72,9 @@ function productToEditor(p: Product): EditorState {
   };
 }
 
-function editorToPayload(e: EditorState) {
-  const category = categoryTree.find(c => c.slug === e.categorySlug);
-  const brand = brands.find(b => b.slug === e.brandSlug);
+function editorToPayload(e: EditorState, categories: CategoryNode[], brandsList: Brand[]) {
+  const category = categories.find(c => c.slug === e.categorySlug);
+  const brand = brandsList.find(b => b.slug === e.brandSlug);
   const specifications: Record<string, string> = {};
   for (const line of e.specsText.split('\n')) {
     const idx = line.indexOf(':');
@@ -106,6 +106,8 @@ function editorToPayload(e: EditorState) {
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<CategoryNode[]>(categoryTree);
+  const [brandsList, setBrandsList] = useState<Brand[]>(brands);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -115,7 +117,10 @@ export default function AdminProductsPage() {
 
   const reload = useCallback(async () => {
     setLoading(true);
-    setProducts(await getProducts());
+    const [prods, cats, brs] = await Promise.all([getProducts(), getCategories(), getBrands()]);
+    setProducts(prods);
+    setCategories(cats.length ? cats : categoryTree);
+    setBrandsList(brs.length ? brs : brands);
     setLoading(false);
   }, []);
 
@@ -139,7 +144,7 @@ export default function AdminProductsPage() {
     setSaving(true);
     setError('');
     try {
-      const payload = editorToPayload(editor);
+      const payload = editorToPayload(editor, categories, brandsList);
       if (editor.id) {
         await adminMutate(`/api/admin/products/${editor.id}`, 'PUT', payload);
         flash('Product updated ✓');
@@ -184,7 +189,11 @@ export default function AdminProductsPage() {
           <button
             onClick={() => {
               setError('');
-              setEditor({ ...EMPTY_EDITOR });
+              setEditor({
+                ...EMPTY_EDITOR,
+                categorySlug: categories[0]?.slug ?? categoryTree[0].slug,
+                brandSlug: brandsList[0]?.slug ?? brands[0].slug,
+              });
             }}
             className="h-10 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700"
           >
@@ -318,7 +327,7 @@ export default function AdminProductsPage() {
               </Field>
               <Field label="Category *">
                 <select className={inputCls} value={editor.categorySlug} onChange={e => setEditor({ ...editor, categorySlug: e.target.value })}>
-                  {categoryTree.map(c => (
+                  {categories.map(c => (
                     <option key={c.slug} value={c.slug}>
                       {c.name}
                     </option>
@@ -327,7 +336,7 @@ export default function AdminProductsPage() {
               </Field>
               <Field label="Brand *">
                 <select className={inputCls} value={editor.brandSlug} onChange={e => setEditor({ ...editor, brandSlug: e.target.value })}>
-                  {brands.map(b => (
+                  {brandsList.map(b => (
                     <option key={b.slug} value={b.slug}>
                       {b.name}
                     </option>

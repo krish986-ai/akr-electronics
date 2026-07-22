@@ -7,14 +7,19 @@ function getAdminApp(): admin.app.App {
     return admin.app();
   }
 
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY
+    ? process.env.FIREBASE_ADMIN_PRIVATE_KEY.trim()
+    : undefined;
+
+  const sanitizedPrivateKey = privateKey
+    ? privateKey.replace(/^"|"$/g, '').replace(/\\n/g, '\n')
+    : undefined;
+
   const options = {
     projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
     clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+    privateKey: sanitizedPrivateKey,
   } as admin.ServiceAccount;
-
-  if (process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
-    (options as any).privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n');
-  }
 
   return admin.initializeApp({
     credential: admin.credential.cert(options),

@@ -64,9 +64,6 @@ export function TopBar() {
           <Link href="/bulk-orders" className="hover:text-primary-600 transition-colors">
             Bulk / B2B Orders
           </Link>
-          <Link href="/contact" className="hover:text-primary-600 transition-colors">
-            Support
-          </Link>
         </div>
       </div>
     </div>

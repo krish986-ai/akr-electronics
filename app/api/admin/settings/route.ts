@@ -9,7 +9,6 @@ const settingsSchema = z.object({
   supportEmail: z.string().email(),
   supportPhone: z.string().min(6).max(20),
   announcement: z.string().max(300),
-  freeDeliveryThreshold: z.number().min(0),
 });
 
 export async function GET(request: NextRequest) {

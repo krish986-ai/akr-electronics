@@ -68,8 +68,6 @@ export interface StoreConfig {
   supportEmail: string;
   supportPhone: string;
   announcement: string;
-  freeDeliveryThreshold: number;
-  deliveryCharges: number;
 }
 
 export const defaultStoreConfig: StoreConfig = {
@@ -78,8 +76,6 @@ export const defaultStoreConfig: StoreConfig = {
   supportPhone: '1800 123 4567',
   announcement:
     'Grand Opening Offer — Free delivery above ₹999 · Use code SAVE10 for 10% off',
-  freeDeliveryThreshold: 999,
-  deliveryCharges: 50,
 };
 
 export interface ProductReview {

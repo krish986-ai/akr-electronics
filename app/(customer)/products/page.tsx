@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { products as fallbackProducts, brands, categoryTree, Product } from '@/lib/mock/products';
-import { getProducts } from '@/lib/data/catalog';
+import { getProducts, getCategories, getBrands } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -26,6 +26,8 @@ function ProductsPageInner() {
   const searchParams = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [categories, setCategories] = useState(categoryTree);
+  const [brandsList, setBrandsList] = useState(brands);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
@@ -35,6 +37,10 @@ function ProductsPageInner() {
 
   useEffect(() => {
     getProducts().then(setProducts);
+    Promise.all([getCategories(), getBrands()]).then(([cats, brs]) => {
+      if (cats.length) setCategories(cats);
+      if (brs.length) setBrandsList(brs);
+    });
   }, []);
 
   useEffect(() => {
@@ -91,7 +97,7 @@ function ProductsPageInner() {
     setCurrentPage(1);
   };
 
-  const activeCategoryName = categoryTree.find(c => c.slug === selectedCategory)?.name;
+  const activeCategoryName = categories.find(c => c.slug === selectedCategory)?.name;
 
   return (
     <div className={cn(container, 'py-8')}>
@@ -128,7 +134,7 @@ function ProductsPageInner() {
               <FilterButton active={!selectedCategory} onClick={() => { setSelectedCategory(''); setCurrentPage(1); }}>
                 All Categories
               </FilterButton>
-              {categoryTree.map(cat => (
+              {categories.map(cat => (
                 <FilterButton
                   key={cat.id}
                   active={selectedCategory === cat.slug}
@@ -156,7 +162,7 @@ function ProductsPageInner() {
               <FilterButton active={!selectedBrand} onClick={() => { setSelectedBrand(''); setCurrentPage(1); }}>
                 All Brands
               </FilterButton>
-              {brands.map(b => (
+              {brandsList.map(b => (
                 <FilterButton
                   key={b.id}
                   active={selectedBrand === b.slug}

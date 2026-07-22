@@ -113,30 +113,11 @@ export default function AdminSettingsPage() {
         </Field>
       </div>
 
-      <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
-        <h2 className="font-semibold text-neutral-900">Delivery Settings</h2>
-        <div className="grid sm:grid-cols-2 gap-4">
-          <Field label="Minimum order for FREE delivery (₹)">
-            <input
-              type="number"
-              min={0}
-              className={inputCls}
-              value={settings.freeDeliveryThreshold}
-              onChange={e => setSettings(s => ({ ...s, freeDeliveryThreshold: Number(e.target.value) }))}
-            />
-          </Field>
-          <Field label="Delivery charges (₹) if below minimum">
-            <input
-              type="number"
-              min={0}
-              className={inputCls}
-              value={settings.deliveryCharges}
-              onChange={e => setSettings(s => ({ ...s, deliveryCharges: Number(e.target.value) }))}
-            />
-          </Field>
-        </div>
-        <p className="text-xs text-neutral-500">
-          💡 Example: Set minimum to ₹999 and delivery charges to ₹50. Orders below ₹999 will have ₹50 added to their total.
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <p className="text-sm text-amber-800">
+          💡 Minimum order for free delivery and the small order charge are configured on the{' '}
+          <a href="/admin/payments" className="font-semibold underline">Payments</a> page, under
+          Delivery &amp; Order Settings.
         </p>
       </div>
 
