@@ -1,12 +1,15 @@
-import { products } from '@/lib/mock/products';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
+import { getServerProducts } from '@/lib/data/server-catalog';
 
 export const metadata = {
   title: 'New Arrivals - A.K.R Electronics',
   description: 'The latest IoT components, boards and kits added to the AKR Electronics store.',
 };
 
-export default function NewArrivalsPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function NewArrivalsPage() {
+  const products = await getServerProducts();
   const newProducts = products.filter(p => p.isNew);
 
   return (

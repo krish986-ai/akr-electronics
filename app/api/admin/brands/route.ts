@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
+import { revalidatePath } from 'next/cache';
+
+function revalidateStorefrontBrands() {
+  revalidatePath('/products');
+}
 
 const brandSchema = z.object({
   id: z.string().min(1),
@@ -19,6 +24,7 @@ export async function POST(request: NextRequest) {
   try {
     const brand = brandSchema.parse(await request.json());
     await getAdminDb().collection('brands').doc(brand.id).set(brand);
+    revalidateStorefrontBrands();
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -54,6 +60,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     await db.collection('brands').doc(id).delete();
+    revalidateStorefrontBrands();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete brand' }, { status: 500 });

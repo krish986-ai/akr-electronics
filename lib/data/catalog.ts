@@ -28,7 +28,22 @@ async function fromCollection<T>(name: string, fallback: T[]): Promise<T[]> {
   try {
     const snapshot = await getDocs(collection(db, name));
     if (snapshot.empty) return fallback;
-    return snapshot.docs.map(d => ({ id: d.id, ...d.data() }) as T);
+    return snapshot.docs.map(d => {
+      const data = d.data();
+      // Keep the storefront compatible with both product flag names. The admin
+      // product editor writes `isNew`, while an earlier repository used
+      // `isNewArrival`.
+      if (name === 'products') {
+        return {
+          id: d.id,
+          ...data,
+          isNew: Boolean(data.isNew ?? data.isNewArrival),
+          isBestseller: Boolean(data.isBestseller),
+          isFeatured: Boolean(data.isFeatured),
+        } as T;
+      }
+      return { id: d.id, ...data } as T;
+    });
   } catch {
     return fallback;
   }

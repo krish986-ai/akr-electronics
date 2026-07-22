@@ -4,12 +4,12 @@ import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { FloatingPartnerWidget } from '@/components/FloatingPartnerWidget';
 import { iotKits, FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
-import { getProducts, getCategories } from '@/lib/data/catalog';
+import { getServerProducts, getServerCategories } from '@/lib/data/server-catalog';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
-// Refresh Firestore-backed content every 5 minutes
-export const revalidate = 300;
+// Admin product selections should be visible as soon as they are saved.
+export const dynamic = 'force-dynamic';
 
 export const metadata = {
   title: 'A.K.R Electronics - Premium IoT Components & Kits',
@@ -32,7 +32,7 @@ const SERVICES = [
 ];
 
 export default async function HomePage() {
-  const [products, categoryTree] = await Promise.all([getProducts(), getCategories()]);
+  const [products, categoryTree] = await Promise.all([getServerProducts(), getServerCategories()]);
   const featured = products.filter(p => p.isFeatured).slice(0, 4);
   const bestsellers = products.filter(p => p.isBestseller).slice(0, 4);
   const newArrivals = products.filter(p => p.isNew).slice(0, 4);

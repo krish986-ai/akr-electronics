@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getProducts, getCategories, getBrands } from '@/lib/data/catalog';
-import { adminMutate } from '@/lib/api/admin-client';
+import { getProducts } from '@/lib/data/catalog';
+import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
 import { Brand, CategoryNode, Product, categoryTree, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
 
@@ -72,8 +72,17 @@ function productToEditor(p: Product): EditorState {
   };
 }
 
+type ProductCategoryOption = CategoryNode & { parentName?: string };
+
+function productCategoryOptions(categories: CategoryNode[]): ProductCategoryOption[] {
+  return categories.flatMap(category => [
+    category,
+    ...(category.children ?? []).map(child => ({ ...child, parentName: category.name })),
+  ]);
+}
+
 function editorToPayload(e: EditorState, categories: CategoryNode[], brandsList: Brand[]) {
-  const category = categories.find(c => c.slug === e.categorySlug);
+  const category = productCategoryOptions(categories).find(c => c.slug === e.categorySlug);
   const brand = brandsList.find(b => b.slug === e.brandSlug);
   const specifications: Record<string, string> = {};
   for (const line of e.specsText.split('\n')) {
@@ -117,7 +126,16 @@ export default function AdminProductsPage() {
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const [prods, cats, brs] = await Promise.all([getProducts(), getCategories(), getBrands()]);
+    const [prods, catalogResponse] = await Promise.all([
+      getProducts(),
+      adminFetch('/api/admin/catalog', { cache: 'no-store' }),
+    ]);
+    const catalog = await catalogResponse.json().catch(() => ({}));
+    if (!catalogResponse.ok) {
+      throw new Error(catalog.error ?? 'Failed to load categories and brands');
+    }
+    const cats = Array.isArray(catalog.categories) ? (catalog.categories as CategoryNode[]) : [];
+    const brs = Array.isArray(catalog.brands) ? (catalog.brands as Brand[]) : [];
     setProducts(prods);
     setCategories(cats.length ? cats : categoryTree);
     setBrandsList(brs.length ? brs : brands);
@@ -133,6 +151,7 @@ export default function AdminProductsPage() {
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       p.sku.toLowerCase().includes(search.toLowerCase())
   );
+  const categoryOptions = productCategoryOptions(categories);
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -191,7 +210,7 @@ export default function AdminProductsPage() {
               setError('');
               setEditor({
                 ...EMPTY_EDITOR,
-                categorySlug: categories[0]?.slug ?? categoryTree[0].slug,
+                categorySlug: categoryOptions[0]?.slug ?? categoryTree[0].slug,
                 brandSlug: brandsList[0]?.slug ?? brands[0].slug,
               });
             }}
@@ -328,9 +347,14 @@ export default function AdminProductsPage() {
               <Field label="Category *">
                 <select className={inputCls} value={editor.categorySlug} onChange={e => setEditor({ ...editor, categorySlug: e.target.value })}>
                   {categories.map(c => (
-                    <option key={c.slug} value={c.slug}>
-                      {c.name}
-                    </option>
+                    <optgroup key={c.slug} label={c.name}>
+                      <option value={c.slug}>{c.name}</option>
+                      {(c.children ?? []).map(child => (
+                        <option key={child.slug} value={child.slug}>
+                          ↳ {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </Field>

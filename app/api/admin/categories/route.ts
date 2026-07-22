@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { deleteHostedImage } from '@/lib/storage/cleanup';
+import { revalidatePath } from 'next/cache';
+
+function revalidateStorefrontCategories() {
+  revalidatePath('/');
+  revalidatePath('/products');
+}
 
 const childSchema = z.object({
   id: z.string().min(1),
@@ -35,6 +41,7 @@ export async function POST(request: NextRequest) {
     if (oldImage && oldImage !== category.image) {
       await deleteHostedImage(oldImage);
     }
+    revalidateStorefrontCategories();
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -71,6 +78,7 @@ export async function DELETE(request: NextRequest) {
 
     await db.collection('categories').doc(id).delete();
     await deleteHostedImage(doc.data()?.image as string | undefined);
+    revalidateStorefrontCategories();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });

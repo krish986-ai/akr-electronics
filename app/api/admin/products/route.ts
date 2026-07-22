@@ -4,6 +4,7 @@ import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { STANDARD_WARRANTY, GST_RATE_DEFAULT } from '@/lib/mock/products';
 import { imageUrlSchema } from '@/lib/validation/image-validation';
+import { revalidatePath } from 'next/cache';
 
 const productInputSchema = z.object({
   name: z.string().min(2).max(200),
@@ -59,6 +60,9 @@ export async function POST(request: NextRequest) {
 
     const ref = db.collection('products').doc();
     await ref.set({ id: ref.id, ...toProductDocument(input) });
+    revalidatePath('/');
+    revalidatePath('/products');
+    revalidatePath('/new-arrivals');
 
     return NextResponse.json({ success: true, id: ref.id }, { status: 201 });
   } catch (error) {

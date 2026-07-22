@@ -5,6 +5,13 @@ import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { STANDARD_WARRANTY } from '@/lib/mock/products';
 import { imageUrlSchema } from '@/lib/validation/image-validation';
 import { deleteHostedImage } from '@/lib/storage/cleanup';
+import { revalidatePath } from 'next/cache';
+
+function revalidateStorefrontProducts() {
+  revalidatePath('/');
+  revalidatePath('/products');
+  revalidatePath('/new-arrivals');
+}
 
 const productUpdateSchema = z.object({
   name: z.string().min(2).max(200).optional(),
@@ -62,6 +69,7 @@ export async function PUT(request: NextRequest, props: { params: Promise<{ id: s
     if (input.image && oldImage && input.image !== oldImage) {
       await deleteHostedImage(oldImage);
     }
+    revalidateStorefrontProducts();
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -86,6 +94,7 @@ export async function DELETE(request: NextRequest, props: { params: Promise<{ id
     const doc = await ref.get();
     await ref.delete();
     await deleteHostedImage(doc.data()?.image as string | undefined);
+    revalidateStorefrontProducts();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete product' }, { status: 500 });
