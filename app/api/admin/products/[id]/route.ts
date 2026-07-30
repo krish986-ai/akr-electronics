@@ -5,9 +5,11 @@ import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { STANDARD_WARRANTY } from '@/lib/mock/products';
 import { imageUrlSchema } from '@/lib/validation/image-validation';
 import { deleteHostedImage } from '@/lib/storage/cleanup';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/data/server-catalog';
 
 function revalidateStorefrontProducts() {
+  revalidateTag(CATALOG_TAG, 'max');
   revalidatePath('/');
   revalidatePath('/products');
   revalidatePath('/new-arrivals');

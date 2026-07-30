@@ -3,9 +3,11 @@ import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { deleteHostedImage } from '@/lib/storage/cleanup';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/data/server-catalog';
 
 function revalidateStorefrontCategories() {
+  revalidateTag(CATALOG_TAG, 'max');
   revalidatePath('/');
   revalidatePath('/products');
 }

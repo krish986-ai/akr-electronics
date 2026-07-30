@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { products } from '@/lib/mock/products';
+import { Product } from '@/lib/mock/products';
+import { getProducts } from '@/lib/data/catalog';
 import { useWishlistStore } from '@/lib/stores/wishlist';
 import { useCartStore } from '@/lib/stores/cart';
 
@@ -10,13 +11,19 @@ export default function WishlistPage() {
   const { productIds, remove } = useWishlistStore();
   const addToCart = useCartStore(state => state.addItem);
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+    setMounted(true);
+    getProducts()
+      .then(setProducts)
+      .catch(() => undefined);
+  }, []);
 
   if (!mounted) return null;
 
   const wishlistItems = productIds
     .map(id => products.find(p => p.id === id))
-    .filter((p): p is (typeof products)[number] => Boolean(p));
+    .filter((p): p is Product => Boolean(p));
 
   return (
     <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">

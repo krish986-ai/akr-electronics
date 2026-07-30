@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { defaultStoreConfig } from '@/lib/mock/products';
+import { revalidateTag } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/data/server-catalog';
 
 const settingsSchema = z.object({
   storeName: z.string().min(2).max(100),
@@ -33,9 +35,8 @@ export async function PUT(request: NextRequest) {
 
   try {
     const settings = settingsSchema.parse(await request.json());
-    console.log('[Settings API] Saving settings:', settings);
     await getAdminDb().collection('config').doc('store').set(settings);
-    console.log('[Settings API] Settings saved successfully');
+    revalidateTag(CATALOG_TAG, 'max');
 
     const response = NextResponse.json({ success: true, settings });
     // Prevent caching to ensure fresh data

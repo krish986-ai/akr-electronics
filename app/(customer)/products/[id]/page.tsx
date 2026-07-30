@@ -10,7 +10,7 @@ import {
   ProductReview,
   ProductQuestion,
 } from '@/lib/mock/products';
-import { getProduct, getProducts, getReviews, getQuestions } from '@/lib/data/catalog';
+import { getProductDetail } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { useCartStore } from '@/lib/stores/cart';
 import { useWishlistStore } from '@/lib/stores/wishlist';
@@ -38,20 +38,21 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   useEffect(() => {
     let cancelled = false;
-    getProduct(id).then(async found => {
-      if (cancelled) return;
-      setProduct(found ?? null);
-      if (found) {
-        const [all, revs, ques] = await Promise.all([getProducts(), getReviews(), getQuestions()]);
-        if (!cancelled) {
-          setRelated(
-            all.filter(p => p.categorySlug === found.categorySlug && p.id !== found.id).slice(0, 4)
-          );
-          setAllReviews(revs);
-          setAllQuestions(ques);
+    getProductDetail(id)
+      .then(detail => {
+        if (cancelled) return;
+        if (!detail) {
+          setProduct(null);
+          return;
         }
-      }
-    });
+        setProduct(detail.product);
+        setRelated(detail.related);
+        setAllReviews(detail.reviews);
+        setAllQuestions(detail.questions);
+      })
+      .catch(() => {
+        if (!cancelled) setProduct(null);
+      });
     return () => {
       cancelled = true;
     };

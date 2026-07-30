@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/data/server-catalog';
 
 function revalidateStorefrontBrands() {
+  revalidateTag(CATALOG_TAG, 'max');
   revalidatePath('/products');
 }
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
-import { brands, categoryTree, Product } from '@/lib/mock/products';
-import { getProducts, getCategories, getBrands } from '@/lib/data/catalog';
+import { brands, categoryTree, CategoryNode, Product } from '@/lib/mock/products';
+import { getCatalogPage, getCategories, getBrands } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -14,29 +14,48 @@ const MAX_PRICE = 50000;
 
 // Mega-menu links use subcategory slugs; products carry top-level slugs.
 // Resolve any slug to the top-level category it belongs to.
-function resolveCategorySlug(slug: string): string {
-  for (const cat of categoryTree) {
+function resolveCategorySlug(slug: string, categories: CategoryNode[]): string {
+  for (const cat of categories) {
     if (cat.slug === slug) return cat.slug;
     if (cat.children?.some(sub => sub.slug === slug)) return cat.slug;
   }
   return slug;
 }
 
+// Windowed page list so huge catalogs don't render hundreds of buttons.
+function pageNumbers(current: number, total: number): (number | '…')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const wanted = [1, current - 1, current, current + 1, total]
+    .filter(p => p >= 1 && p <= total)
+    .sort((a, b) => a - b);
+  const pages: (number | '…')[] = [];
+  let prev = 0;
+  for (const p of wanted) {
+    if (p === prev) continue;
+    if (p - prev > 1) pages.push('…');
+    pages.push(p);
+    prev = p;
+  }
+  return pages;
+}
+
 function ProductsPageInner() {
   const searchParams = useSearchParams();
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
   const [categories, setCategories] = useState(categoryTree);
   const [brandsList, setBrandsList] = useState(brands);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
+  const [debouncedMaxPrice, setDebouncedMaxPrice] = useState(MAX_PRICE);
   const [sortBy, setSortBy] = useState('popular');
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
-    getProducts().then(setProducts);
     Promise.all([getCategories(), getBrands()]).then(([cats, brs]) => {
       if (cats.length) setCategories(cats);
       if (brs.length) setBrandsList(brs);
@@ -45,48 +64,42 @@ function ProductsPageInner() {
 
   useEffect(() => {
     setSearchQuery(searchParams.get('search') ?? '');
-    setSelectedCategory(resolveCategorySlug(searchParams.get('category') ?? ''));
+    setSelectedCategory(searchParams.get('category') ?? '');
     setSelectedBrand(searchParams.get('brand') ?? '');
     setCurrentPage(1);
   }, [searchParams]);
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const result = products.filter(p => {
-      const matchesSearch =
-        !q ||
-        p.name.toLowerCase().includes(q) ||
-        p.description.toLowerCase().includes(q) ||
-        p.brand.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q);
-      const matchesCategory = !selectedCategory || p.categorySlug === selectedCategory;
-      const matchesBrand = !selectedBrand || p.brandSlug === selectedBrand;
-      const matchesPrice = p.price <= maxPrice;
-      return matchesSearch && matchesCategory && matchesBrand && matchesPrice;
-    });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setDebouncedMaxPrice(maxPrice);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, maxPrice]);
 
-    switch (sortBy) {
-      case 'price-low':
-        result.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        result.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'newest':
-        result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-        break;
-      default:
-        result.sort((a, b) => b.reviews - a.reviews);
-    }
+  useEffect(() => {
+    let cancelled = false;
+    getCatalogPage({
+      search: debouncedSearch || undefined,
+      category: selectedCategory || undefined,
+      brand: selectedBrand || undefined,
+      maxPrice: debouncedMaxPrice < MAX_PRICE ? debouncedMaxPrice : undefined,
+      sort: sortBy,
+      page: currentPage,
+      pageSize: ITEMS_PER_PAGE,
+    })
+      .then(result => {
+        if (cancelled) return;
+        setProducts(result.items);
+        setTotal(result.total);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, selectedCategory, selectedBrand, debouncedMaxPrice, sortBy, currentPage]);
 
-    return result;
-  }, [products, searchQuery, selectedCategory, selectedBrand, maxPrice, sortBy]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const paginated = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
 
   const resetFilters = () => {
     setSearchQuery('');
@@ -97,7 +110,9 @@ function ProductsPageInner() {
     setCurrentPage(1);
   };
 
-  const activeCategoryName = categories.find(c => c.slug === selectedCategory)?.name;
+  const activeCategoryName = categories.find(
+    c => c.slug === resolveCategorySlug(selectedCategory, categories)
+  )?.name;
 
   return (
     <div className={cn(container, 'py-8')}>
@@ -137,7 +152,7 @@ function ProductsPageInner() {
               {categories.map(cat => (
                 <FilterButton
                   key={cat.id}
-                  active={selectedCategory === cat.slug}
+                  active={resolveCategorySlug(selectedCategory, categories) === cat.slug}
                   onClick={() => { setSelectedCategory(cat.slug); setCurrentPage(1); }}
                 >
                   {cat.image ? (
@@ -202,7 +217,7 @@ function ProductsPageInner() {
         <div className="lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <p className="text-sm text-neutral-500">
-              {filtered.length} product{filtered.length === 1 ? '' : 's'} found
+              {total} product{total === 1 ? '' : 's'} found
               {searchQuery && <> for “<span className="font-medium text-neutral-900">{searchQuery}</span>”</>}
             </p>
             <select
@@ -221,30 +236,36 @@ function ProductsPageInner() {
             </select>
           </div>
 
-          {paginated.length > 0 ? (
+          {products.length > 0 ? (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-                {paginated.map(product => (
+                {products.map(product => (
                   <StoreProductCard key={product.id} product={product} />
                 ))}
               </div>
 
               {totalPages > 1 && (
                 <div className="flex justify-center gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={cn(
-                        'w-9 h-9 rounded-lg text-sm font-medium',
-                        page === currentPage
-                          ? 'bg-primary-600 text-white'
-                          : 'border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
-                      )}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  {pageNumbers(currentPage, totalPages).map((page, i) =>
+                    page === '…' ? (
+                      <span key={`gap-${i}`} className="w-9 h-9 grid place-items-center text-sm text-neutral-400">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={cn(
+                          'w-9 h-9 rounded-lg text-sm font-medium',
+                          page === currentPage
+                            ? 'bg-primary-600 text-white'
+                            : 'border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
+                        )}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
                 </div>
               )}
             </>

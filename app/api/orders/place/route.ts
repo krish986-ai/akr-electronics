@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyUserRequest } from '@/lib/auth/user-guard';
+import { revalidateTag } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/data/server-catalog';
 
 const orderItemSchema = z.object({
   productId: z.string().min(1),
@@ -143,6 +145,9 @@ export async function POST(request: NextRequest) {
         createdAt: new Date(),
       });
     });
+
+    // Stock changed — refresh the cached catalog so storefront counts stay honest.
+    revalidateTag(CATALOG_TAG, 'max');
 
     return NextResponse.json({ ok: true, orderNumber: order.orderNumber }, { status: 201 });
   } catch (error) {

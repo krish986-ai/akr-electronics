@@ -1,18 +1,26 @@
 'use client';
 
-import { Suspense, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { products, Product } from '@/lib/mock/products';
+import { Product } from '@/lib/mock/products';
+import { getProducts } from '@/lib/data/catalog';
 
 const MAX_COMPARE = 4;
 
 function ComparePageInner() {
   const searchParams = useSearchParams();
+  const [products, setProducts] = useState<Product[]>([]);
   const initial = useMemo(() => {
     const fromQuery = searchParams.get('add');
-    return fromQuery && products.some(p => p.id === fromQuery) ? [fromQuery] : [];
+    return fromQuery ? [fromQuery] : [];
   }, [searchParams]);
+
+  useEffect(() => {
+    getProducts()
+      .then(setProducts)
+      .catch(() => undefined);
+  }, []);
 
   const [selectedIds, setSelectedIds] = useState<string[]>(initial);
   const selected = selectedIds

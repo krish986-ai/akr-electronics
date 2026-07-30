@@ -3,6 +3,13 @@ import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { deleteHostedImage } from '@/lib/storage/cleanup';
+import { revalidatePath, revalidateTag } from 'next/cache';
+import { CATALOG_TAG } from '@/lib/data/server-catalog';
+
+function revalidateStorefrontBanners() {
+  revalidateTag(CATALOG_TAG, 'max');
+  revalidatePath('/');
+}
 
 const bannerSchema = z.object({
   id: z.string().min(1),
@@ -31,6 +38,7 @@ export async function POST(request: NextRequest) {
     if (oldImage && oldImage !== banner.image) {
       await deleteHostedImage(oldImage);
     }
+    revalidateStorefrontBanners();
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -55,6 +63,7 @@ export async function DELETE(request: NextRequest) {
     const doc = await ref.get();
     await ref.delete();
     await deleteHostedImage(doc.data()?.image as string | undefined);
+    revalidateStorefrontBanners();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: 'Failed to delete banner' }, { status: 500 });
