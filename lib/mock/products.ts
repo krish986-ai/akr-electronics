@@ -68,6 +68,8 @@ export interface StoreConfig {
   supportEmail: string;
   supportPhone: string;
   announcement: string;
+  freeDeliveryThreshold: number;
+  deliveryCharges: number;
 }
 
 export const defaultStoreConfig: StoreConfig = {
@@ -76,6 +78,8 @@ export const defaultStoreConfig: StoreConfig = {
   supportPhone: '1800 123 4567',
   announcement:
     'Grand Opening Offer — Free delivery above ₹999 · Use code SAVE10 for 10% off',
+  freeDeliveryThreshold: 999,
+  deliveryCharges: 50,
 };
 
 export interface ProductReview {
@@ -212,12 +216,21 @@ export const categoryTree: CategoryNode[] = [
       { id: 'c8b', name: 'Soldering', slug: 'soldering', icon: '🔥' },
     ],
   },
+  {
+    id: 'c9',
+    name: 'Resistors',
+    slug: 'resistors',
+    icon: '⚡',
+    children: [
+      { id: 'c9a', name: '1/4W Resistors', slug: 'quarter-watt-resistors', icon: '⚡' },
+    ],
+  },
 ];
 
 // Kept for pages that still use the flat category list
 export const categories = categoryTree.map(({ id, name, slug, icon }) => ({ id, name, slug, icon }));
 
-export const products: Product[] = [
+const baseProducts: Product[] = [
   {
     id: '1',
     name: 'Arduino Uno R3',
@@ -590,8 +603,64 @@ export const products: Product[] = [
     rating: 4.7,
     reviews: 190,
     isNew: true,
-  },
+  }
 ];
+
+function createResistorProduct(val: string, idx: number): Product {
+  const slugVal = val.toLowerCase().replace(/ /g, '-').replace('Ω', 'ohm').replace('.', '-');
+  const skuNum = String(idx + 1).padStart(4, '0');
+  return {
+    id: `res-${idx + 1}`,
+    name: `1/4W Resistor ${val} (Pack of 10)`,
+    slug: `resistor-${slugVal}-pack-of-10`,
+    sku: `AKR-RES-${skuNum}`,
+    image: 'https://images.unsplash.com/photo-1601132359864-c974e79890ac?w=500&h=500&fit=crop',
+    price: 10,
+    originalPrice: 15,
+    gstRate: 18,
+    category: 'Resistors',
+    categorySlug: 'resistors',
+    brand: 'AKR Pro',
+    brandSlug: 'akr-pro',
+    description: `High-quality 1/4W 5% carbon film resistor (${val}). Ideal for breadboard prototyping, DIY electronic projects, and circuit current limiting. Sold as a pack of 10 pieces (₹10 for 10 pcs).`,
+    specifications: {
+      Resistance: val,
+      'Power Rating': '1/4 Watt (0.25W)',
+      Tolerance: '±5%',
+      Type: 'Carbon Film Through-Hole',
+      'Package Quantity': '10 Pieces',
+      'Operating Voltage': '250V (Max)',
+      'Lead Diameter': '0.4mm (Standard)',
+      'Shipping Weight': '0.01 kg',
+    },
+    features: [
+      'High reliability and long-term stability',
+      'Standard 1/4 Watt (0.25W) power dissipation',
+      'Flame retardant coating for safety',
+      '4-band standard EIA color code',
+      'Sturdy axial leads for easy breadboard insertion',
+      'Pack of 10 pieces (₹1 per piece, sold in pack of 10 for ₹10)',
+    ],
+    packageIncludes: [`10 x 1/4W Resistors (${val})`],
+    warranty: STANDARD_WARRANTY,
+    countryOfOrigin: 'India',
+    stock: 1000,
+    rating: 4.8,
+    reviews: 12 + (idx % 20),
+    isBestseller: idx === 7 || idx === 23 || idx === 31,
+  };
+}
+
+const resistorValues = [
+  '1 Ω', '2.2 Ω', '3.3 Ω', '4.7 Ω', '5.6 Ω', '6.8 Ω', '8.2 Ω', '10 Ω', '12 Ω', '15 Ω', '18 Ω', '22 Ω', '27 Ω', '33 Ω', '39 Ω', '47 Ω', '56 Ω', '68 Ω', '82 Ω', '100 Ω', '120 Ω', '150 Ω', '180 Ω', '220 Ω', '270 Ω', '330 Ω', '390 Ω', '470 Ω', '560 Ω', '680 Ω', '820 Ω',
+  '1 kΩ', '1.2 kΩ', '1.5 kΩ', '1.8 kΩ', '2.2 kΩ', '2.7 kΩ', '3.3 kΩ', '3.9 kΩ', '4.7 kΩ', '5.6 kΩ', '6.8 kΩ', '8.2 kΩ', '10 kΩ', '12 kΩ', '15 kΩ', '18 kΩ', '22 kΩ', '27 kΩ', '33 kΩ', '39 kΩ', '47 kΩ', '56 kΩ', '68 kΩ', '82 kΩ', '100 kΩ', '120 kΩ', '150 kΩ', '180 kΩ', '220 kΩ', '270 kΩ', '330 kΩ', '390 kΩ', '470 kΩ', '560 kΩ', '680 kΩ', '820 kΩ',
+  '1 MΩ', '1.5 MΩ', '2.2 MΩ', '3.3 MΩ', '4.7 MΩ', '6.8 MΩ', '10 MΩ',
+];
+
+const resistorProducts: Product[] = resistorValues.map((val, idx) => createResistorProduct(val, idx));
+
+export const products: Product[] = [...baseProducts, ...resistorProducts];
+
 
 export const iotKits = [
   {
