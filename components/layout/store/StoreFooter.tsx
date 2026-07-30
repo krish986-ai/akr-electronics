@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 const COLUMNS = [
@@ -41,34 +41,9 @@ const COLUMNS = [
 
 const DEFAULT_PHONE = '1800 123 4567';
 
-export function StoreFooter() {
+export function StoreFooter({ phone = DEFAULT_PHONE }: { phone?: string }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
-  const [phone, setPhone] = useState(DEFAULT_PHONE);
-
-  useEffect(() => {
-    const loadPhone = async () => {
-      try {
-        console.log('[StoreFooter] Loading phone from public API...');
-        const res = await fetch('/api/public/settings', {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-store, max-age=0',
-          },
-        });
-        const data = await res.json();
-        console.log('[StoreFooter] Phone loaded:', data.supportPhone);
-
-        if (res.ok && data.supportPhone) {
-          setPhone(data.supportPhone);
-        }
-      } catch (e) {
-        console.error('[StoreFooter] Error:', e);
-      }
-    };
-
-    loadPhone();
-  }, []);
 
   return (
     <footer className="bg-neutral-900 text-neutral-300 mt-16">

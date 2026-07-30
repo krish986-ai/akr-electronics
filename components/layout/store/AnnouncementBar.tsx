@@ -1,17 +1,6 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { defaultStoreConfig } from '@/lib/mock/products';
-import { getStoreConfig } from '@/lib/data/catalog';
 
-export function AnnouncementBar() {
-  const [text, setText] = useState(defaultStoreConfig.announcement);
-
-  useEffect(() => {
-    getStoreConfig().then(config => setText(config.announcement));
-  }, []);
-
+export function AnnouncementBar({ text }: { text: string }) {
   if (!text.trim()) return null;
 
   return (

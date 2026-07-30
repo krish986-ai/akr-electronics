@@ -3,18 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { heroBanners, HeroBanner } from '@/lib/mock/products';
-import { getActiveBanners } from '@/lib/data/catalog';
 
-export function HeroCarousel() {
-  const [banners, setBanners] = useState<HeroBanner[]>(heroBanners);
+export function HeroCarousel({ banners: bannersProp }: { banners?: HeroBanner[] }) {
+  const banners = bannersProp && bannersProp.length > 0 ? bannersProp : heroBanners;
   const [index, setIndex] = useState(0);
-
-  useEffect(() => {
-    getActiveBanners().then(active => {
-      setBanners(active);
-      setIndex(0);
-    });
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setIndex(i => (i + 1) % banners.length), 6000);

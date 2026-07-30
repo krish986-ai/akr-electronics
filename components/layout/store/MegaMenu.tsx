@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils/cn';
 import { categoryTree as fallbackCategoryTree, CategoryNode } from '@/lib/mock/products';
-import { getCategories } from '@/lib/data/catalog';
 
 const INLINE_ALWAYS = 4;
 const INLINE_XL = 6;
@@ -15,15 +14,9 @@ function categoryVisibility(index: number): string {
   return 'hidden';
 }
 
-export function MegaMenu() {
+export function MegaMenu({ categories }: { categories: CategoryNode[] }) {
   const [openCategory, setOpenCategory] = useState<string | null>(null);
-  const [categoryTree, setCategoryTree] = useState<CategoryNode[]>(fallbackCategoryTree);
-
-  useEffect(() => {
-    getCategories().then(categories => {
-      if (categories.length > 0) setCategoryTree(categories);
-    });
-  }, []);
+  const categoryTree = categories.length > 0 ? categories : fallbackCategoryTree;
 
   return (
     <div className="hidden lg:block bg-primary-600 text-white">

@@ -4,7 +4,7 @@ import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { FloatingPartnerWidget } from '@/components/FloatingPartnerWidget';
 import { iotKits, FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
-import { getServerProducts, getServerCategories } from '@/lib/data/server-catalog';
+import { getServerBanners, getServerProducts, getServerCategories } from '@/lib/data/server-catalog';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
@@ -33,7 +33,11 @@ const SERVICES = [
 ];
 
 export default async function HomePage() {
-  const [products, categoryTree] = await Promise.all([getServerProducts(), getServerCategories()]);
+  const [products, categoryTree, banners] = await Promise.all([
+    getServerProducts(),
+    getServerCategories(),
+    getServerBanners(),
+  ]);
   const featured = products.filter(p => p.isFeatured).slice(0, 4);
   const bestsellers = products.filter(p => p.isBestseller).slice(0, 4);
   const newArrivals = products.filter(p => p.isNew).slice(0, 4);
@@ -42,7 +46,7 @@ export default async function HomePage() {
     <StoreShell>
       <FloatingPartnerWidget />
 
-      <HeroCarousel />
+      <HeroCarousel banners={banners.filter(b => b.active !== false)} />
 
       <section className="border-b border-neutral-200 bg-white">
         <div className={`${container} grid grid-cols-2 lg:grid-cols-4 gap-4 py-6`}>
