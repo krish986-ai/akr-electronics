@@ -68,9 +68,6 @@ export function StoreFooter() {
     };
 
     loadPhone();
-    // Refresh every 10 seconds to show live updates
-    const interval = setInterval(loadPhone, 10000);
-    return () => clearInterval(interval);
   }, []);
 
   return (

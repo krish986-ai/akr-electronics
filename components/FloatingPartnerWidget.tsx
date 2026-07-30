@@ -42,8 +42,6 @@ export function FloatingPartnerWidget() {
     };
 
     loadPartner();
-    const interval = setInterval(loadPartner, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleMouseLeave = () => {

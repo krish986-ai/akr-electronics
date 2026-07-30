@@ -41,9 +41,6 @@ export function TopBar() {
     };
 
     loadConfig();
-    // Refresh every 10 seconds to show live updates
-    const interval = setInterval(loadConfig, 10000);
-    return () => clearInterval(interval);
   }, []);
 
   return (

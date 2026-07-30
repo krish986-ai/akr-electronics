@@ -60,9 +60,6 @@ export function PartnershipsSection() {
     };
 
     loadPartnerships();
-    // Refresh every 5 seconds to show live updates
-    const interval = setInterval(loadPartnerships, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   if (loading) {
@@ -167,9 +164,6 @@ export function PartnershipsLogoBar() {
     };
 
     loadPartnerships();
-    // Refresh every 5 seconds to show live updates
-    const interval = setInterval(loadPartnerships, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   if (partnerships.length === 0) {

@@ -49,8 +49,6 @@ export function StoreHeader() {
     };
 
     loadPartner();
-    const interval = setInterval(loadPartner, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const submitSearch = (term: string) => {
