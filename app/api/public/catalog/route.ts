@@ -8,5 +8,7 @@ export async function GET() {
     getServerBrands(),
   ]);
 
-  return NextResponse.json({ products, categories, brands });
+  const response = NextResponse.json({ products, categories, brands });
+  response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  return response;
 }

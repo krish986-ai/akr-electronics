@@ -1,32 +1,31 @@
 import { NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 
+const DEFAULTS = {
+  supportPhone: '1800 123 4567',
+  supportEmail: 'support@akrelectronics.com',
+  storeName: 'A.K.R Electronics',
+  announcement: '',
+};
+
+// Cached at the Vercel CDN so repeat visitors don't touch Firestore.
+const CACHE_HEADER = 'public, s-maxage=300, stale-while-revalidate=600';
+
 export async function GET() {
   try {
-    console.log('[Public Settings API] Fetching store config...');
     const doc = await getAdminDb().collection('config').doc('store').get();
     const data = doc.data();
-    console.log('[Public Settings API] Config found:', data);
 
     const response = NextResponse.json({
-      supportPhone: data?.supportPhone || '1800 123 4567',
-      supportEmail: data?.supportEmail || 'support@akrelectronics.com',
-      storeName: data?.storeName || 'A.K.R Electronics',
-      announcement: data?.announcement || '',
+      supportPhone: data?.supportPhone || DEFAULTS.supportPhone,
+      supportEmail: data?.supportEmail || DEFAULTS.supportEmail,
+      storeName: data?.storeName || DEFAULTS.storeName,
+      announcement: data?.announcement || DEFAULTS.announcement,
     });
-
-    // No cache - always fresh
-    response.headers.set('Cache-Control', 'no-store, max-age=0');
+    response.headers.set('Cache-Control', CACHE_HEADER);
     return response;
   } catch (error) {
     console.error('[Public Settings API] Error:', error);
-    const response = NextResponse.json({
-      supportPhone: '1800 123 4567',
-      supportEmail: 'support@akrelectronics.com',
-      storeName: 'A.K.R Electronics',
-      announcement: '',
-    });
-    response.headers.set('Cache-Control', 'no-store, max-age=0');
-    return response;
+    return NextResponse.json(DEFAULTS);
   }
 }

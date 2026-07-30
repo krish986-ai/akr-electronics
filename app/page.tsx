@@ -8,8 +8,9 @@ import { getServerProducts, getServerCategories } from '@/lib/data/server-catalo
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
-// Admin product selections should be visible as soon as they are saved.
-export const dynamic = 'force-dynamic';
+// Served statically from the Vercel CDN; admin catalog writes trigger
+// revalidatePath('/') so edits still show up right after saving.
+export const revalidate = 300;
 
 export const metadata = {
   title: 'A.K.R Electronics - Premium IoT Components & Kits',
