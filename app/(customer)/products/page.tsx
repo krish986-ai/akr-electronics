@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
-import { products as fallbackProducts, brands, categoryTree, Product } from '@/lib/mock/products';
+import { brands, categoryTree, Product } from '@/lib/mock/products';
 import { getProducts, getCategories, getBrands } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 
@@ -25,7 +25,7 @@ function resolveCategorySlug(slug: string): string {
 function ProductsPageInner() {
   const searchParams = useSearchParams();
 
-  const [products, setProducts] = useState<Product[]>(fallbackProducts);
+  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState(categoryTree);
   const [brandsList, setBrandsList] = useState(brands);
   const [searchQuery, setSearchQuery] = useState('');

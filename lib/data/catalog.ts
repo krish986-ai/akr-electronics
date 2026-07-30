@@ -1,9 +1,6 @@
-import { collection, getDocs, doc, getDoc, query, where, limit as fbLimit } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import {
-  products as mockProducts,
-  brands as mockBrands,
-  categoryTree as mockCategoryTree,
   coupons as mockCoupons,
   productReviews as mockReviews,
   productQuestions as mockQuestions,
@@ -18,6 +15,30 @@ import {
   HeroBanner,
   StoreConfig,
 } from '@/lib/mock/products';
+
+type StorefrontCatalog = {
+  products: Product[];
+  categories: CategoryNode[];
+  brands: Brand[];
+};
+
+let storefrontCatalogPromise: Promise<StorefrontCatalog> | null = null;
+
+async function getStorefrontCatalog(): Promise<StorefrontCatalog> {
+  if (!storefrontCatalogPromise) {
+    storefrontCatalogPromise = fetch('/api/public/catalog').then(async response => {
+      if (!response.ok) throw new Error('Unable to load the live product catalog');
+      return response.json() as Promise<StorefrontCatalog>;
+    });
+  }
+
+  try {
+    return await storefrontCatalogPromise;
+  } catch (error) {
+    storefrontCatalogPromise = null;
+    throw error;
+  }
+}
 
 // Single data-access point for the storefront. Reads Firestore when Firebase
 // is configured and the collection has data; otherwise serves the mock
@@ -50,35 +71,19 @@ async function fromCollection<T>(name: string, fallback: T[]): Promise<T[]> {
 }
 
 export async function getProducts(): Promise<Product[]> {
-  return fromCollection<Product>('products', mockProducts);
+  return (await getStorefrontCatalog()).products;
 }
 
 export async function getProduct(idOrSlug: string): Promise<Product | undefined> {
-  if (isFirebaseConfigured && db) {
-    try {
-      const byId = await getDoc(doc(db, 'products', idOrSlug));
-      if (byId.exists()) return { id: byId.id, ...byId.data() } as Product;
-
-      const bySlug = await getDocs(
-        query(collection(db, 'products'), where('slug', '==', idOrSlug), fbLimit(1))
-      );
-      if (!bySlug.empty) {
-        const d = bySlug.docs[0];
-        return { id: d.id, ...d.data() } as Product;
-      }
-    } catch {
-      // fall through to mock
-    }
-  }
-  return mockProducts.find(p => p.id === idOrSlug || p.slug === idOrSlug);
+  return (await getProducts()).find(p => p.id === idOrSlug || p.slug === idOrSlug);
 }
 
 export async function getBrands(): Promise<Brand[]> {
-  return fromCollection<Brand>('brands', mockBrands);
+  return (await getStorefrontCatalog()).brands;
 }
 
 export async function getCategories(): Promise<CategoryNode[]> {
-  return fromCollection<CategoryNode>('categories', mockCategoryTree);
+  return (await getStorefrontCatalog()).categories;
 }
 
 export async function getCoupons(): Promise<Coupon[]> {
