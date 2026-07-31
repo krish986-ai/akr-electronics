@@ -7,6 +7,11 @@ export interface WarrantyInfo {
   voidsIf: string;
 }
 
+// The warranty policy text (summary + voidsIf) is store-wide and admin
+// editable under Settings — every product shares it. Only `days` stays
+// per-product (set on each product's own editor).
+export type WarrantyPolicy = Pick<WarrantyInfo, 'summary' | 'voidsIf'>;
+
 export interface KitItem {
   productId: string;
   quantity: number;
@@ -124,6 +129,13 @@ export const STANDARD_WARRANTY: WarrantyInfo = {
     'Covered against manufacturing defects for 15 days from delivery. Replacement is provided for verified manufacturing defects.',
   voidsIf:
     'Warranty is void if the product is misused, tampered with, damaged by static discharge, water or fire, exposed to chemicals, or soldered/altered in any way.',
+};
+
+// Seeded from the policy text above, so the site behaves identically until
+// an admin actually edits it under Settings — nothing changes on day one.
+export const defaultWarrantyPolicy: WarrantyPolicy = {
+  summary: STANDARD_WARRANTY.summary,
+  voidsIf: STANDARD_WARRANTY.voidsIf,
 };
 
 export const FREE_DELIVERY_THRESHOLD = 999;

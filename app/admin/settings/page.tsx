@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { StoreConfig, defaultStoreConfig } from '@/lib/mock/products';
+import { StoreConfig, defaultStoreConfig, WarrantyPolicy, defaultWarrantyPolicy } from '@/lib/mock/products';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 
 export default function AdminSettingsPage() {
@@ -10,6 +10,12 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+
+  const [warranty, setWarranty] = useState<WarrantyPolicy>(defaultWarrantyPolicy);
+  const [warrantyLoading, setWarrantyLoading] = useState(true);
+  const [warrantySaving, setWarrantySaving] = useState(false);
+  const [warrantyError, setWarrantyError] = useState('');
+  const [warrantySaved, setWarrantySaved] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -23,7 +29,50 @@ export default function AdminSettingsPage() {
         setLoading(false);
       }
     })();
+    (async () => {
+      try {
+        const res = await adminFetch('/api/admin/warranty-settings');
+        const data = await res.json();
+        if (res.ok) setWarranty(data);
+      } catch {
+        // keep defaults
+      } finally {
+        setWarrantyLoading(false);
+      }
+    })();
   }, []);
+
+  const saveWarranty = async () => {
+    setWarrantySaving(true);
+    setWarrantyError('');
+    setWarrantySaved('');
+    try {
+      await adminMutate('/api/admin/warranty-settings', 'PUT', warranty);
+      setWarrantySaved('✓ Warranty policy saved — applies to every product store-wide');
+      setTimeout(() => setWarrantySaved(''), 3000);
+    } catch (e) {
+      setWarrantyError(e instanceof Error ? e.message : 'Save failed');
+    } finally {
+      setWarrantySaving(false);
+    }
+  };
+
+  const resetWarranty = async () => {
+    if (!confirm('Reset the warranty policy to the original default text? This affects every product.')) return;
+    setWarrantySaving(true);
+    setWarrantyError('');
+    setWarrantySaved('');
+    try {
+      await adminMutate('/api/admin/warranty-settings', 'DELETE');
+      setWarranty(defaultWarrantyPolicy);
+      setWarrantySaved('✓ Reset to the default warranty policy');
+      setTimeout(() => setWarrantySaved(''), 3000);
+    } catch (e) {
+      setWarrantyError(e instanceof Error ? e.message : 'Reset failed');
+    } finally {
+      setWarrantySaving(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -53,7 +102,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || warrantyLoading) {
     return <p className="p-8 text-center text-sm text-neutral-500">Loading settings...</p>;
   }
 
@@ -128,6 +177,59 @@ export default function AdminSettingsPage() {
       >
         {saving ? 'Saving...' : 'Save Settings'}
       </button>
+
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 space-y-4">
+        <div>
+          <h2 className="font-semibold text-neutral-900">Warranty Policy</h2>
+          <p className="text-xs text-neutral-500 mt-0.5">
+            Applies to every product store-wide. Only the number of warranty days stays per-product — set that on
+            each product's own editor.
+          </p>
+        </div>
+
+        {warrantySaved && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+            {warrantySaved}
+          </div>
+        )}
+        {warrantyError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{warrantyError}</div>
+        )}
+
+        <Field label="Warranty summary (shown on every product's Warranty tab)">
+          <textarea
+            rows={3}
+            className={inputCls}
+            value={warranty.summary}
+            onChange={e => setWarranty(w => ({ ...w, summary: e.target.value }))}
+          />
+        </Field>
+        <Field label="What voids the warranty">
+          <textarea
+            rows={3}
+            className={inputCls}
+            value={warranty.voidsIf}
+            onChange={e => setWarranty(w => ({ ...w, voidsIf: e.target.value }))}
+          />
+        </Field>
+
+        <div className="flex gap-3">
+          <button
+            onClick={saveWarranty}
+            disabled={warrantySaving}
+            className="h-11 px-8 rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+          >
+            {warrantySaving ? 'Saving...' : 'Save Warranty Policy'}
+          </button>
+          <button
+            onClick={resetWarranty}
+            disabled={warrantySaving}
+            className="h-11 px-5 rounded-lg border border-neutral-300 text-neutral-700 font-medium hover:bg-neutral-50 disabled:opacity-50"
+          >
+            Reset to Default
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

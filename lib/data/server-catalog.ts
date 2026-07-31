@@ -2,6 +2,8 @@ import { getAdminDb } from '@/lib/firebase/admin';
 import { unstable_cache } from 'next/cache';
 import {
   defaultStoreConfig,
+  defaultWarrantyPolicy,
+  STANDARD_WARRANTY,
   Brand,
   CategoryNode,
   HeroBanner,
@@ -10,6 +12,7 @@ import {
   ProductQuestion,
   ProductReview,
   StoreConfig,
+  WarrantyPolicy,
 } from '@/lib/mock/products';
 
 // Every cached read below shares this tag. Admin catalog writes and order
@@ -23,7 +26,16 @@ const CACHE_OPTIONS = { revalidate: 86400, tags: [CATALOG_TAG] };
 // browser-SDK read failure being silently replaced by the static mock catalog.
 // Product documents created before the field was standardised use `isNew`;
 // newer backend code may use `isNewArrival`, so support both forms.
-function toStorefrontProduct(id: string, data: Record<string, unknown>): Product {
+//
+// Warranty text (summary/voidsIf) is forced to the current global policy
+// here regardless of what's stored on the product document — it's store-wide
+// and admin-editable under Settings. Only `days` stays per-product.
+function toStorefrontProduct(
+  id: string,
+  data: Record<string, unknown>,
+  warrantyPolicy: WarrantyPolicy
+): Product {
+  const storedWarranty = data.warranty as Partial<{ days: number }> | undefined;
   return {
     ...(data as unknown as Product),
     id,
@@ -31,6 +43,11 @@ function toStorefrontProduct(id: string, data: Record<string, unknown>): Product
     isBestseller: Boolean(data.isBestseller),
     isFeatured: Boolean(data.isFeatured),
     isKit: Boolean(data.isKit),
+    warranty: {
+      days: storedWarranty?.days ?? STANDARD_WARRANTY.days,
+      summary: warrantyPolicy.summary,
+      voidsIf: warrantyPolicy.voidsIf,
+    },
   };
 }
 
@@ -40,11 +57,14 @@ function toStorefrontProduct(id: string, data: Record<string, unknown>): Product
 // storefront for the full `revalidate` window. Callers below catch and
 // fall back outside the cache, where the fallback itself is never cached.
 async function readServerProducts(): Promise<Product[]> {
-  const snapshot = await getAdminDb().collection('products').get();
+  const [snapshot, warrantyPolicy] = await Promise.all([
+    getAdminDb().collection('products').get(),
+    readServerWarrantyPolicy(),
+  ]);
   if (snapshot.empty) return [];
 
   return snapshot.docs.map(product =>
-    toStorefrontProduct(product.id, product.data() as Record<string, unknown>)
+    toStorefrontProduct(product.id, product.data() as Record<string, unknown>, warrantyPolicy)
   );
 }
 
@@ -74,11 +94,18 @@ async function readServerConfig(): Promise<StoreConfig> {
   return { ...defaultStoreConfig, ...(snapshot.data() as Partial<StoreConfig>) };
 }
 
+async function readServerWarrantyPolicy(): Promise<WarrantyPolicy> {
+  const snapshot = await getAdminDb().collection('config').doc('warranty').get();
+  if (!snapshot.exists) return defaultWarrantyPolicy;
+  return { ...defaultWarrantyPolicy, ...(snapshot.data() as Partial<WarrantyPolicy>) };
+}
+
 const cachedProducts = unstable_cache(readServerProducts, ['storefront-products'], CACHE_OPTIONS);
 const cachedCategories = unstable_cache(readServerCategories, ['storefront-categories'], CACHE_OPTIONS);
 const cachedBrands = unstable_cache(readServerBrands, ['storefront-brands'], CACHE_OPTIONS);
 const cachedBanners = unstable_cache(readServerBanners, ['storefront-banners'], CACHE_OPTIONS);
 const cachedConfig = unstable_cache(readServerConfig, ['storefront-config'], CACHE_OPTIONS);
+const cachedWarrantyPolicy = unstable_cache(readServerWarrantyPolicy, ['storefront-warranty'], CACHE_OPTIONS);
 
 // Failures aren't cached by unstable_cache (see above), so without a backoff
 // a Firestore outage would make every single request retry Firestore. This
@@ -121,6 +148,10 @@ export function getServerBanners(): Promise<HeroBanner[]> {
 
 export function getServerConfig(): Promise<StoreConfig> {
   return withFailureCooldown('config', cachedConfig, defaultStoreConfig, 'store config');
+}
+
+export function getServerWarrantyPolicy(): Promise<WarrantyPolicy> {
+  return withFailureCooldown('warranty', cachedWarrantyPolicy, defaultWarrantyPolicy, 'warranty policy');
 }
 
 // Catalog queries run against the cached product list, so filtering, search
