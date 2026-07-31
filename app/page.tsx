@@ -3,7 +3,7 @@ import { StoreShell } from '@/components/layout/store/StoreShell';
 import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { FloatingPartnerWidget } from '@/components/FloatingPartnerWidget';
-import { iotKits, FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
+import { FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
 import { getServerBanners, getServerProducts, getServerCategories } from '@/lib/data/server-catalog';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -41,6 +41,7 @@ export default async function HomePage() {
   const featured = products.filter(p => p.isFeatured).slice(0, 4);
   const bestsellers = products.filter(p => p.isBestseller).slice(0, 4);
   const newArrivals = products.filter(p => p.isNew).slice(0, 4);
+  const starterKits = products.filter(p => p.isKit).slice(0, 4);
 
   return (
     <StoreShell>
@@ -87,42 +88,7 @@ export default async function HomePage() {
       <ProductRail title="Bestsellers" items={bestsellers} href="/products" tint="bg-neutral-50" />
       <ProductRail title="New Arrivals" items={newArrivals} href="/new-arrivals" />
 
-      <section className="bg-neutral-50 border-y border-neutral-200">
-        <div className={`${container} py-12`}>
-          <h2 className="text-2xl font-bold text-neutral-900 mb-6">IoT Starter Kits</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {iotKits.map(kit => (
-              <div
-                key={kit.id}
-                className="bg-white rounded-xl border border-neutral-200 p-6 flex gap-5 hover:shadow-lg transition-shadow"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={kit.image}
-                  alt={kit.name}
-                  loading="lazy"
-                  className="w-28 h-28 rounded-lg object-cover shrink-0"
-                />
-                <div>
-                  <h3 className="font-semibold text-neutral-900">{kit.name}</h3>
-                  <p className="text-sm text-neutral-500 mt-1 line-clamp-2">{kit.description}</p>
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <span className="font-bold text-lg">₹{kit.price.toLocaleString('en-IN')}</span>
-                    {kit.originalPrice && (
-                      <span className="text-sm text-neutral-400 line-through">
-                        ₹{kit.originalPrice.toLocaleString('en-IN')}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-neutral-400 mt-1">
-                    {kit.components.length} components · ★ {kit.rating} ({kit.reviews})
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <ProductRail title="IoT Starter Kits" items={starterKits} href="/products?category=iot-starter-kits" tint="bg-neutral-50" />
 
       <section className={`${container} py-12`}>
         <h2 className="text-2xl font-bold text-neutral-900 mb-6">Why Makers Choose AKR</h2>

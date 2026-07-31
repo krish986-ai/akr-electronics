@@ -24,6 +24,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   const [product, setProduct] = useState<Product | null | undefined>(undefined);
   const [related, setRelated] = useState<Product[]>([]);
+  const [kitContents, setKitContents] = useState<{ product: Product; quantity: number }[]>([]);
   const [allReviews, setAllReviews] = useState<ProductReview[]>([]);
   const [allQuestions, setAllQuestions] = useState<ProductQuestion[]>([]);
   const [tab, setTab] = useState<Tab>('Description');
@@ -47,6 +48,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         }
         setProduct(detail.product);
         setRelated(detail.related);
+        setKitContents(detail.kitContents ?? []);
         setAllReviews(detail.reviews);
         setAllQuestions(detail.questions);
       })
@@ -181,6 +183,31 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </li>
             ))}
           </ul>
+
+          {kitContents.length > 0 && (
+            <div className="mt-5 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
+              <p className="text-xs font-semibold text-neutral-700 mb-2">
+                📦 What's Included ({kitContents.length} item{kitContents.length === 1 ? '' : 's'})
+              </p>
+              <div className="space-y-2">
+                {kitContents.map(({ product: item, quantity: qty }) => (
+                  <Link
+                    key={item.id}
+                    href={`/products/${item.id}`}
+                    className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-white transition-colors"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={item.image} alt={item.name} className="w-9 h-9 rounded-md object-cover border border-neutral-200 shrink-0" />
+                    <span className="flex-1 text-xs text-neutral-800 line-clamp-1">{item.name}</span>
+                    <span className="text-xs text-neutral-500 shrink-0">×{qty}</span>
+                    <span className="text-xs font-medium text-neutral-700 shrink-0">
+                      ₹{(item.price * qty).toLocaleString('en-IN')}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="mt-5 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
             <p className="text-xs font-semibold text-neutral-700 mb-2">📍 Check estimated delivery</p>

@@ -4,7 +4,6 @@ import {
   products,
   brands,
   categoryTree,
-  iotKits,
   coupons,
   productReviews,
   productQuestions,
@@ -38,9 +37,6 @@ export async function POST(request: NextRequest) {
     for (const c of categoryTree) {
       batch.set(db.collection('categories').doc(c.id), c);
     }
-    for (const kit of iotKits) {
-      batch.set(db.collection('kits').doc(kit.id), kit);
-    }
     for (const coupon of coupons) {
       batch.set(db.collection('coupons').doc(coupon.code), coupon);
     }
@@ -59,7 +55,6 @@ export async function POST(request: NextRequest) {
         products: products.length,
         brands: brands.length,
         categories: categoryTree.length,
-        kits: iotKits.length,
         coupons: coupons.length,
         reviews: productReviews.length,
         questions: productQuestions.length,

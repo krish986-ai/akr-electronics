@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { getProducts } from '@/lib/data/catalog';
+import { getProducts, resetCatalogCache } from '@/lib/data/catalog';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
 import { Brand, CategoryNode, Product, categoryTree, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
@@ -119,6 +119,10 @@ export default function AdminProductsPage() {
   const [brandsList, setBrandsList] = useState<Brand[]>(brands);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterBrand, setFilterBrand] = useState('');
+  const [filterMinPrice, setFilterMinPrice] = useState('');
+  const [filterMaxPrice, setFilterMaxPrice] = useState('');
   const [editor, setEditor] = useState<EditorState | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -126,6 +130,7 @@ export default function AdminProductsPage() {
 
   const reload = useCallback(async () => {
     setLoading(true);
+    resetCatalogCache();
     const [prods, catalogResponse] = await Promise.all([
       getProducts(),
       adminFetch('/api/admin/catalog', { cache: 'no-store' }),
@@ -146,12 +151,28 @@ export default function AdminProductsPage() {
     reload();
   }, [reload]);
 
-  const filtered = products.filter(
-    p =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase())
-  );
   const categoryOptions = productCategoryOptions(categories);
+  const minPrice = filterMinPrice ? Number(filterMinPrice) : undefined;
+  const maxPrice = filterMaxPrice ? Number(filterMaxPrice) : undefined;
+
+  const filtered = products.filter(p => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = !filterCategory || p.categorySlug === filterCategory;
+    const matchesBrand = !filterBrand || p.brandSlug === filterBrand;
+    const matchesMinPrice = minPrice === undefined || p.price >= minPrice;
+    const matchesMaxPrice = maxPrice === undefined || p.price <= maxPrice;
+    return matchesSearch && matchesCategory && matchesBrand && matchesMinPrice && matchesMaxPrice;
+  });
+
+  const hasActiveFilters = Boolean(search || filterCategory || filterBrand || filterMinPrice || filterMaxPrice);
+  const resetFilters = () => {
+    setSearch('');
+    setFilterCategory('');
+    setFilterBrand('');
+    setFilterMinPrice('');
+    setFilterMaxPrice('');
+  };
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -196,7 +217,10 @@ export default function AdminProductsPage() {
       <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-neutral-900">Products</h1>
-          <p className="text-sm text-neutral-500">{products.length} in catalog · changes go live within ~5 min</p>
+          <p className="text-sm text-neutral-500">
+            {hasActiveFilters ? `${filtered.length} of ${products.length}` : products.length} in catalog · changes go
+            live within ~5 min
+          </p>
         </div>
         <div className="flex gap-3">
           <input
@@ -219,6 +243,72 @@ export default function AdminProductsPage() {
             + New Product
           </button>
         </div>
+      </div>
+
+      <div className="bg-white border border-neutral-200 rounded-xl p-4 flex items-end gap-3 flex-wrap">
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Category</label>
+          <select
+            value={filterCategory}
+            onChange={e => setFilterCategory(e.target.value)}
+            className="h-9 w-48 rounded-lg border border-neutral-300 px-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Categories</option>
+            {categories.map(c => (
+              <optgroup key={c.slug} label={c.name}>
+                <option value={c.slug}>{c.name}</option>
+                {(c.children ?? []).map(child => (
+                  <option key={child.slug} value={child.slug}>
+                    ↳ {child.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Brand</label>
+          <select
+            value={filterBrand}
+            onChange={e => setFilterBrand(e.target.value)}
+            className="h-9 w-40 rounded-lg border border-neutral-300 px-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            <option value="">All Brands</option>
+            {brandsList.map(b => (
+              <option key={b.slug} value={b.slug}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Min Price ₹</label>
+          <input
+            type="number"
+            value={filterMinPrice}
+            onChange={e => setFilterMinPrice(e.target.value)}
+            placeholder="0"
+            className="h-9 w-24 rounded-lg border border-neutral-300 px-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-neutral-600 mb-1">Max Price ₹</label>
+          <input
+            type="number"
+            value={filterMaxPrice}
+            onChange={e => setFilterMaxPrice(e.target.value)}
+            placeholder="Any"
+            className="h-9 w-24 rounded-lg border border-neutral-300 px-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          />
+        </div>
+        {hasActiveFilters && (
+          <button
+            onClick={resetFilters}
+            className="h-9 px-3 rounded-lg border border-neutral-300 text-neutral-700 text-sm font-medium hover:bg-neutral-50"
+          >
+            Reset Filters
+          </button>
+        )}
       </div>
 
       {notice && (
@@ -285,7 +375,7 @@ export default function AdminProductsPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={7} className="px-4 py-8 text-center text-neutral-500">
-                    No products match your search.
+                    No products match your search/filters.
                   </td>
                 </tr>
               )}

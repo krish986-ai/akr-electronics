@@ -7,6 +7,11 @@ export interface WarrantyInfo {
   voidsIf: string;
 }
 
+export interface KitItem {
+  productId: string;
+  quantity: number;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -33,6 +38,8 @@ export interface Product {
   isNew?: boolean;
   isBestseller?: boolean;
   isFeatured?: boolean;
+  isKit?: boolean;
+  kitItems?: KitItem[];
 }
 
 export interface Brand {
@@ -661,33 +668,6 @@ const resistorProducts: Product[] = resistorValues.map((val, idx) => createResis
 
 export const products: Product[] = [...baseProducts, ...resistorProducts];
 
-
-export const iotKits = [
-  {
-    id: 'k1',
-    name: 'AKR Arduino Beginner Starter Kit',
-    slug: 'arduino-beginner-kit',
-    image: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=500&h=500&fit=crop',
-    price: 1999,
-    originalPrice: 2500,
-    description: 'Everything you need to start learning Arduino programming and building IoT projects.',
-    components: ['Arduino Uno R3', 'Breadboard', 'LED Set', 'Resistor Set', 'Jumper Wires', 'USB Cable', 'Project Guide'],
-    rating: 4.9,
-    reviews: 245,
-  },
-  {
-    id: 'k2',
-    name: 'AKR IoT Home Automation Kit',
-    slug: 'iot-home-automation-kit',
-    image: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&h=500&fit=crop',
-    price: 4999,
-    originalPrice: 6500,
-    description: 'Complete kit for building a smart home automation system with sensors and controls.',
-    components: ['ESP32 Board', 'Relay Module', 'DHT22 Sensor', 'PIR Motion Sensor', 'Power Supply', 'Wiring & Connectors', 'Project Guide'],
-    rating: 4.7,
-    reviews: 156,
-  },
-];
 
 export const heroBanners: HeroBanner[] = [
   {

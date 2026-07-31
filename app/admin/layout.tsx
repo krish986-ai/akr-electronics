@@ -12,6 +12,7 @@ const baseSidebarItems = [
   { icon: '📋', label: 'Orders', href: '/admin/orders', id: 'orders' },
   { icon: '💳', label: 'Payments', href: '/admin/payments', id: 'payments' },
   { icon: '📦', label: 'Products', href: '/admin/products', id: 'products' },
+  { icon: '🧰', label: 'Starter Kits', href: '/admin/starter-kits', id: 'starter-kits' },
   { icon: '🏷️', label: 'Categories', href: '/admin/categories', id: 'categories' },
   { icon: '🏢', label: 'Brands', href: '/admin/brands', id: 'brands' },
   { icon: '🖼️', label: 'Banners', href: '/admin/banners', id: 'banners' },

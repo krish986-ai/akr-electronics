@@ -10,6 +10,8 @@ function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
+const SLUG_PATTERN = /^[a-z0-9-]{2,80}$/;
+
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<CategoryNode[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -121,6 +123,38 @@ export default function AdminCategoriesPage() {
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Rename failed');
+    }
+  };
+
+  const editSub = async (parent: CategoryNode, sub: CategoryNode) => {
+    const name = prompt('Subcategory name:', sub.name)?.trim();
+    if (!name) return;
+    const slug = prompt('Subcategory slug (lowercase letters, numbers, hyphens):', sub.slug)?.trim();
+    if (!slug) return;
+    if (!SLUG_PATTERN.test(slug)) {
+      setError('Slug must be 2-80 characters: lowercase letters, numbers, and hyphens only.');
+      return;
+    }
+    if (name === sub.name && slug === sub.slug) return;
+
+    const collidesWithTopLevel = categories.some(c => c.id !== parent.id && c.slug === slug);
+    const collidesWithOtherSub = categories.some(c =>
+      (c.children ?? []).some(other => other.id !== sub.id && other.slug === slug)
+    );
+    if ((collidesWithTopLevel || collidesWithOtherSub) &&
+        !confirm(`Slug "${slug}" is already used by another category. Products under that slug will resolve to whichever category wins the lookup. Continue anyway?`)) {
+      return;
+    }
+
+    setError('');
+    try {
+      await adminMutate('/api/admin/categories', 'POST', {
+        ...parent,
+        children: (parent.children ?? []).map(c => (c.id === sub.id ? { ...c, name, slug } : c)),
+      });
+      await reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update subcategory');
     }
   };
 
@@ -254,6 +288,9 @@ export default function AdminCategoriesPage() {
                         <p className="text-sm text-neutral-800">{sub.name}</p>
                         <p className="text-xs text-neutral-500">/{sub.slug}</p>
                       </div>
+                      <button onClick={() => editSub(cat, sub)} className="text-xs text-primary-600 hover:underline font-medium">
+                        Edit
+                      </button>
                       <button onClick={() => removeSub(cat, sub.id)} className="text-xs text-red-600 hover:underline">
                         Remove
                       </button>

@@ -48,6 +48,7 @@ export type CatalogPage = {
   total: number;
   page: number;
   pageSize: number;
+  searchMode?: 'exact' | 'fuzzy' | 'related' | 'popular';
 };
 
 export type ProductDetail = {
@@ -55,6 +56,7 @@ export type ProductDetail = {
   related: Product[];
   reviews: ProductReview[];
   questions: ProductQuestion[];
+  kitContents?: { product: Product; quantity: number }[];
 };
 
 function memoizedFetch<T>(url: string): { get: () => Promise<T>; reset: () => void } {
@@ -83,6 +85,15 @@ const catalogFetch = memoizedFetch<StorefrontCatalog>('/api/public/catalog');
 
 // Small payload for the page chrome (menus, banners, footer, announcement).
 const metaFetch = memoizedFetch<StorefrontMeta>('/api/public/storefront');
+
+// Admin pages call this after creating/editing/deleting so their next
+// reload() actually re-fetches instead of replaying the first response a
+// browser tab ever got for these endpoints — memoizedFetch never expires
+// on its own.
+export function resetCatalogCache(): void {
+  catalogFetch.reset();
+  metaFetch.reset();
+}
 
 export async function getProducts(): Promise<Product[]> {
   return (await catalogFetch.get()).products;

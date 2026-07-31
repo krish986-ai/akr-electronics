@@ -29,6 +29,8 @@ const productInputSchema = z.object({
   isNew: z.boolean().optional(),
   isBestseller: z.boolean().optional(),
   isFeatured: z.boolean().optional(),
+  isKit: z.boolean().optional(),
+  kitItems: z.array(z.object({ productId: z.string().min(1), quantity: z.number().int().positive() })).optional(),
 });
 
 export type ProductInput = z.infer<typeof productInputSchema>;

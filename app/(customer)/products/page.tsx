@@ -13,10 +13,13 @@ const ITEMS_PER_PAGE = 12;
 const MAX_PRICE = 50000;
 
 // Mega-menu links use subcategory slugs; products carry top-level slugs.
-// Resolve any slug to the top-level category it belongs to.
+// A subcategory can share its slug with an unrelated top-level category
+// (e.g. a "Resistor" subcategory under "Basic Electronic Components" next
+// to a standalone top-level "Resistor" category), so an exact top-level
+// match must always win before falling back to a subcategory lookup.
 function resolveCategorySlug(slug: string, categories: CategoryNode[]): string {
+  if (categories.some(cat => cat.slug === slug)) return slug;
   for (const cat of categories) {
-    if (cat.slug === slug) return cat.slug;
     if (cat.children?.some(sub => sub.slug === slug)) return cat.slug;
   }
   return slug;
@@ -44,6 +47,7 @@ function ProductsPageInner() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
+  const [searchMode, setSearchMode] = useState<'exact' | 'fuzzy' | 'related' | 'popular' | undefined>(undefined);
   const [categories, setCategories] = useState(categoryTree);
   const [brandsList, setBrandsList] = useState(brands);
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,6 +96,7 @@ function ProductsPageInner() {
         if (cancelled) return;
         setProducts(result.items);
         setTotal(result.total);
+        setSearchMode(result.searchMode);
       })
       .catch(() => undefined);
     return () => {
@@ -217,8 +222,12 @@ function ProductsPageInner() {
         <div className="lg:col-span-3">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
             <p className="text-sm text-neutral-500">
-              {total} product{total === 1 ? '' : 's'} found
-              {searchQuery && <> for “<span className="font-medium text-neutral-900">{searchQuery}</span>”</>}
+              {total} product{total === 1 ? '' : 's'}
+              {searchQuery && searchMode === 'exact' && (
+                <> found for “<span className="font-medium text-neutral-900">{searchQuery}</span>”</>
+              )}
+              {searchQuery && searchMode && searchMode !== 'exact' && <> shown</>}
+              {!searchQuery && <> found</>}
             </p>
             <select
               value={sortBy}
@@ -235,6 +244,20 @@ function ProductsPageInner() {
               <option value="rating">Highest Rated</option>
             </select>
           </div>
+
+          {searchQuery && searchMode && searchMode !== 'exact' && (
+            <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
+              {searchMode === 'fuzzy' && (
+                <>No exact matches for “{searchQuery}” — showing close matches instead.</>
+              )}
+              {searchMode === 'related' && (
+                <>No exact matches for “{searchQuery}” — here are related products you might like.</>
+              )}
+              {searchMode === 'popular' && (
+                <>Couldn't find anything for “{searchQuery}” — here are some popular picks instead.</>
+              )}
+            </div>
+          )}
 
           {products.length > 0 ? (
             <>
