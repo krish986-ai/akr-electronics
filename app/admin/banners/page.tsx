@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { HeroBanner } from '@/lib/mock/products';
 import { getBanners } from '@/lib/data/catalog';
 import { adminMutate } from '@/lib/api/admin-client';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
+import { safeImageSrc } from '@/lib/utils/image';
 
 const GRADIENTS = [
   'from-primary-700 via-primary-600 to-primary-400',
@@ -137,8 +139,7 @@ export default function AdminBannersPage() {
               }`}
             >
               {b.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={b.image} alt="" className="w-24 h-14 rounded-lg object-cover shrink-0" />
+                <Image src={safeImageSrc(b.image)} alt="" width={96} height={56} className="w-24 h-14 rounded-lg object-cover shrink-0" />
               ) : (
                 <div className={`w-24 h-14 rounded-lg bg-gradient-to-r ${b.gradient} shrink-0`} />
               )}

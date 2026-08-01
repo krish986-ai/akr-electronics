@@ -18,7 +18,6 @@ import {
   Price, PriceRange,
   Rating
 } from '@/components/ui';
-import { MainLayout } from '@/components/layout';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
 
@@ -30,15 +29,7 @@ export default function ShowcasePage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   return (
-    <MainLayout
-      navbar={{
-        brand: 'A.K.R - UI Showcase',
-        items: [{ label: 'Components', href: '#' }],
-      }}
-      footer={{
-        copyright: '© 2026 A.K.R Electronics Design System',
-      }}
-    >
+    <div className="min-h-screen bg-white">
       <div className={cn(container, 'py-12')}>
         <div className="mb-12">
           <h1 className="text-4xl font-bold text-neutral-900 mb-3">Design System Showcase</h1>
@@ -60,7 +51,7 @@ export default function ShowcasePage() {
           defaultTab="buttons"
         />
       </div>
-    </MainLayout>
+    </div>
   );
 }
 

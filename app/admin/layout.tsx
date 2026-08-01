@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
 import { AdminGuard } from '@/components/admin/AdminGuard';
@@ -45,10 +46,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         )}
       >
         <div className="p-4 border-b border-neutral-200 flex items-center gap-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={sidebarOpen ? '/images/logo-mark.png' : '/images/logo-icon.png'}
             alt="A.K.R Electronics"
+            width={sidebarOpen ? 604 : 512}
+            height={sidebarOpen ? 256 : 512}
+            priority
             className="h-9 w-auto rounded-lg shadow-sm shrink-0"
           />
           {sidebarOpen && (

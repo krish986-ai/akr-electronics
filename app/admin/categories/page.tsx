@@ -1,10 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { CategoryNode, Product } from '@/lib/mock/products';
 import { getCategories, getProducts } from '@/lib/data/catalog';
 import { adminMutate, adminUpload } from '@/lib/api/admin-client';
 import { ImageUploadField, validateImageForUpload } from '@/components/admin/ImageUploadField';
+import { safeImageSrc } from '@/lib/utils/image';
 
 function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -249,10 +251,11 @@ export default function AdminCategoriesPage() {
                 </button>
                 <span className="text-lg">{cat.icon}</span>
                 {cat.image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={cat.image}
+                  <Image
+                    src={safeImageSrc(cat.image)}
                     alt=""
+                    width={32}
+                    height={32}
                     className="w-8 h-8 rounded-lg object-cover border border-neutral-200 shrink-0"
                   />
                 )}

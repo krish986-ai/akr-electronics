@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Image from 'next/image';
 import { getProducts, resetCatalogCache } from '@/lib/data/catalog';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
+import { safeImageSrc } from '@/lib/utils/image';
 import { Brand, CategoryNode, Product, categoryTree, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
 
 interface EditorState {
@@ -339,7 +341,7 @@ export default function AdminProductsPage() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.image} alt="" className="w-10 h-10 rounded-lg object-cover border border-neutral-200" />
+                      <Image src={safeImageSrc(p.image)} alt="" width={40} height={40} className="w-10 h-10 rounded-lg object-cover border border-neutral-200" />
                       <span className="font-medium text-neutral-900">{p.name}</span>
                     </div>
                   </td>

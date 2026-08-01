@@ -2,11 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useCartStore, cartSubtotal, cartShipping } from '@/lib/stores/cart';
+import { useBuyNowStore } from '@/lib/stores/buy-now';
 import { FREE_DELIVERY_THRESHOLD } from '@/lib/mock/products';
+import { safeImageSrc } from '@/lib/utils/image';
 
 export default function CartPage() {
   const { items, updateQuantity, removeItem, clearCart } = useCartStore();
+  const clearBuyNow = useBuyNowStore(state => state.clearBuyNow);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -54,8 +58,13 @@ export default function CartPage() {
               key={item.productId}
               className="bg-white border border-neutral-200 rounded-xl p-4 flex gap-4 items-center"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={item.image} alt={item.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
+              <Image
+                src={safeImageSrc(item.image)}
+                alt={item.name}
+                width={80}
+                height={80}
+                className="w-20 h-20 rounded-lg object-cover shrink-0"
+              />
               <div className="flex-1 min-w-0">
                 <Link
                   href={`/products/${item.productId}`}
@@ -117,6 +126,7 @@ export default function CartPage() {
           </div>
           <Link
             href="/checkout"
+            onClick={() => clearBuyNow()}
             className="block w-full mt-5 h-11 leading-[44px] text-center rounded-lg bg-primary-600 text-white font-semibold hover:bg-primary-700"
           >
             Proceed to Checkout →

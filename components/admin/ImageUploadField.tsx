@@ -1,9 +1,11 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Image from 'next/image';
 import { adminUpload } from '@/lib/api/admin-client';
 import { MAX_IMAGE_SIZE_KB } from '@/lib/validation/image-validation';
 import { StorageCategory } from '@/lib/storage/types';
+import { isValidImageSrc } from '@/lib/utils/image';
 
 interface ImageUploadFieldProps {
   value: string;
@@ -65,11 +67,12 @@ export function ImageUploadField({
   return (
     <div>
       <div className="flex items-center gap-2">
-        {value && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+        {isValidImageSrc(value) && (
+          <Image
             src={value}
             alt=""
+            width={40}
+            height={40}
             className="w-10 h-10 rounded-lg object-cover border border-neutral-200 shrink-0"
           />
         )}

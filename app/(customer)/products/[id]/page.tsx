@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, use } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   estimateDelivery,
@@ -11,8 +12,10 @@ import {
   ProductQuestion,
 } from '@/lib/mock/products';
 import { getProductDetail } from '@/lib/data/catalog';
+import { safeImageSrc } from '@/lib/utils/image';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { useCartStore } from '@/lib/stores/cart';
+import { useBuyNowStore } from '@/lib/stores/buy-now';
 import { useWishlistStore } from '@/lib/stores/wishlist';
 
 const TABS = ['Description', 'Specification', 'Warranty', 'Reviews', 'QnA', 'Country of Origin'] as const;
@@ -33,6 +36,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [deliveryMsg, setDeliveryMsg] = useState<{ ok: boolean; message: string } | null>(null);
   const [added, setAdded] = useState(false);
   const addItem = useCartStore(state => state.addItem);
+  const setBuyNow = useBuyNowStore(state => state.setBuyNow);
   const wishlistIds = useWishlistStore(state => state.productIds);
   const toggleWishlist = useWishlistStore(state => state.toggle);
   const inWishlist = product ? wishlistIds.includes(product.id) : false;
@@ -110,18 +114,25 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
       <div className="grid lg:grid-cols-2 gap-10">
         <div>
-          <div className="aspect-square bg-neutral-50 rounded-xl border border-neutral-200 overflow-hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={gallery[0]} alt={product.name} className="w-full h-full object-cover" />
+          <div className="relative aspect-square bg-neutral-50 rounded-xl border border-neutral-200 overflow-hidden">
+            <Image
+              src={safeImageSrc(gallery[0])}
+              alt={product.name}
+              fill
+              priority
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover"
+            />
           </div>
           {gallery.length > 1 && (
             <div className="flex gap-2 mt-3">
               {gallery.map((img, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   key={i}
-                  src={img}
+                  src={safeImageSrc(img)}
                   alt={`${product.name} view ${i + 1}`}
+                  width={64}
+                  height={64}
                   className="w-16 h-16 rounded-lg border border-neutral-200 object-cover"
                 />
               ))}
@@ -196,8 +207,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                     href={`/products/${item.id}`}
                     className="flex items-center gap-2.5 p-1.5 rounded-lg hover:bg-white transition-colors"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={item.image} alt={item.name} className="w-9 h-9 rounded-md object-cover border border-neutral-200 shrink-0" />
+                    <Image
+                      src={safeImageSrc(item.image)}
+                      alt={item.name}
+                      width={36}
+                      height={36}
+                      className="w-9 h-9 rounded-md object-cover border border-neutral-200 shrink-0"
+                    />
                     <span className="flex-1 text-xs text-neutral-800 line-clamp-1">{item.name}</span>
                     <span className="text-xs text-neutral-500 shrink-0">×{qty}</span>
                     <span className="text-xs font-medium text-neutral-700 shrink-0">
@@ -264,7 +280,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
             <button
               disabled={product.stock === 0}
               onClick={() => {
-                addItem(product, quantity);
+                setBuyNow(product, quantity);
                 router.push('/checkout');
               }}
               className="flex-1 h-10 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700 disabled:opacity-50"

@@ -2,11 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/client';
 import { useCartStore, cartCount } from '@/lib/stores/cart';
+import { categoryTree as fallbackCategoryTree, CategoryNode } from '@/lib/mock/products';
+import { safeImageSrc } from '@/lib/utils/image';
 
 const SEARCH_SUGGESTIONS = ['Arduino Uno R3', 'ESP32', 'Raspberry Pi 4', 'how to build a robot'];
+
+const UTILITY_LINKS = [
+  { href: '/new-arrivals', label: 'New Arrivals' },
+  { href: '/track-order', label: 'Track Order' },
+  { href: '/bulk-orders', label: 'Bulk Orders' },
+  { href: '/about', label: 'About Us' },
+  { href: '/contact', label: 'Contact' },
+];
 
 interface Partnership {
   id: string;
@@ -15,7 +26,7 @@ interface Partnership {
   link: string;
 }
 
-export function StoreHeader() {
+export function StoreHeader({ categories }: { categories: CategoryNode[] }) {
   const router = useRouter();
   const { isAuthenticated, user, logout } = useAuth();
   const items = useCartStore(state => state.items);
@@ -26,7 +37,16 @@ export function StoreHeader() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [partner, setPartner] = useState<Partnership | null>(null);
+  const categoryTree = categories.length > 0 ? categories : fallbackCategoryTree;
+
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     const loadPartner = async () => {
@@ -73,10 +93,12 @@ export function StoreHeader() {
           <div className="flex items-center gap-2.5 shrink-0 relative">
             <Link href="/" className="flex items-center gap-2.5">
               {/* AKR Logo - always shown */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/images/logo-mark.png"
                 alt="A.K.R Electronics"
+                width={604}
+                height={256}
+                priority
                 className="h-9 w-auto rounded-lg shadow-sm"
               />
             </Link>
@@ -96,11 +118,13 @@ export function StoreHeader() {
                 >
                   {/* Partner Logo - animated pulse */}
                   <div className="relative">
-                    <div className="w-7 h-7 rounded-lg overflow-hidden border-2 border-primary-300 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary-50 to-white shadow-md">
-                      <img
-                        src={partner.logo}
+                    <div className="relative w-7 h-7 rounded-lg overflow-hidden border-2 border-primary-300 flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary-50 to-white shadow-md">
+                      <Image
+                        src={safeImageSrc(partner.logo)}
                         alt={partner.name}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="28px"
+                        className="object-cover"
                         onError={(e) => {
                           (e.target as HTMLImageElement).style.display = 'none';
                         }}
@@ -251,28 +275,151 @@ export function StoreHeader() {
         </div>
       </div>
 
-      {mobileOpen && (
-        <div className="lg:hidden border-t border-neutral-200 bg-white px-4 py-3 space-y-1">
-          {[
-            { href: '/', label: 'Home' },
-            { href: '/products', label: 'All Products' },
-            { href: '/new-arrivals', label: 'New Arrivals' },
-            { href: '/track-order', label: 'Track Order' },
-            { href: '/bulk-orders', label: 'Bulk Orders' },
-            { href: '/about', label: 'About Us' },
-            { href: '/contact', label: 'Contact' },
-          ].map(item => (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className="block px-2 py-2 text-sm font-medium text-neutral-700 hover:text-primary-600 hover:bg-neutral-50 rounded-md"
-            >
-              {item.label}
-            </Link>
-          ))}
+      <div
+        className={`lg:hidden fixed inset-0 z-50 bg-black/50 transition-opacity duration-300 ${
+          mobileOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        }`}
+        onClick={() => setMobileOpen(false)}
+        aria-hidden="true"
+      />
+
+      <div
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-white shadow-xl transition-transform duration-300 ease-out flex flex-col ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu"
+      >
+        <div className="flex items-center justify-between h-14 px-4 border-b border-neutral-200 shrink-0">
+          <span className="font-bold text-neutral-900">Menu</span>
+          <button
+            aria-label="Close menu"
+            onClick={() => setMobileOpen(false)}
+            className="w-9 h-9 grid place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 text-lg"
+          >
+            ✕
+          </button>
         </div>
-      )}
+
+        <div className="flex-1 overflow-y-auto overscroll-contain">
+          <div className="p-3 border-b border-neutral-100">
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3 px-2 py-2">
+                <span className="text-2xl">👤</span>
+                <div>
+                  <p className="text-sm font-semibold text-neutral-900">{user?.name || 'My Account'}</p>
+                  <Link
+                    href="/profile"
+                    onClick={() => setMobileOpen(false)}
+                    className="text-xs text-primary-600 hover:underline"
+                  >
+                    View profile
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2 p-1">
+                <Link
+                  href="/auth/login"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex-1 h-10 grid place-items-center rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/auth/register"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex-1 h-10 grid place-items-center rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+          </div>
+
+          <nav className="py-2">
+            <Link
+              href="/"
+              onClick={() => setMobileOpen(false)}
+              className="block px-4 py-3 text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
+            >
+              Home
+            </Link>
+            <Link
+              href="/products"
+              onClick={() => setMobileOpen(false)}
+              className="block px-4 py-3 text-sm font-semibold text-neutral-900 hover:bg-neutral-50"
+            >
+              All Products
+            </Link>
+
+            <p className="px-4 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
+              Shop by Category
+            </p>
+            {categoryTree.map(cat => {
+              const isExpanded = expandedCategory === cat.id;
+              return (
+                <div key={cat.id} className="border-b border-neutral-50 last:border-b-0">
+                  <div className="flex items-center">
+                    <Link
+                      href={`/products?category=${cat.slug}`}
+                      onClick={() => setMobileOpen(false)}
+                      className="flex-1 flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-neutral-700 active:bg-neutral-50"
+                    >
+                      <span className="text-base">{cat.icon}</span>
+                      {cat.name}
+                    </Link>
+                    {cat.children && cat.children.length > 0 && (
+                      <button
+                        type="button"
+                        aria-label={isExpanded ? `Collapse ${cat.name}` : `Expand ${cat.name}`}
+                        aria-expanded={isExpanded}
+                        onClick={() => setExpandedCategory(isExpanded ? null : cat.id)}
+                        className="w-11 h-11 grid place-items-center text-neutral-400 shrink-0"
+                      >
+                        <span
+                          className={`inline-block text-xs transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                        >
+                          ▼
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                  {cat.children && cat.children.length > 0 && isExpanded && (
+                    <div className="pb-1 bg-neutral-50/60">
+                      {cat.children.map(sub => (
+                        <Link
+                          key={sub.id}
+                          href={`/products?category=${sub.slug}`}
+                          onClick={() => setMobileOpen(false)}
+                          className="flex items-center gap-2.5 pl-10 pr-4 py-2.5 text-sm text-neutral-600 active:bg-neutral-100"
+                        >
+                          <span className="text-sm">{sub.icon}</span>
+                          {sub.name}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="mt-2 pt-2 border-t border-neutral-100">
+              {UTILITY_LINKS.map(item => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className="block px-4 py-2.5 text-sm text-neutral-600 hover:bg-neutral-50"
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        </div>
+      </div>
     </header>
   );
 }

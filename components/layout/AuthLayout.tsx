@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -15,10 +16,12 @@ export function AuthLayout({
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-accent-50 px-4 py-10">
       <div className="w-full max-w-md">
         <Link href="/" className="block w-fit mx-auto mb-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/images/logo-full.png"
             alt="A.K.R Electronics"
+            width={892}
+            height={460}
+            priority
             className="w-40 h-auto rounded-xl shadow-md"
           />
         </Link>

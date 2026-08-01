@@ -15,7 +15,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
     <>
       <AnnouncementBar text={config.announcement} />
       <TopBar phone={config.supportPhone} email={config.supportEmail} />
-      <StoreHeader />
+      <StoreHeader categories={categories} />
       <MegaMenu categories={categories} />
       <main className="min-h-[60vh]">{children}</main>
       <StoreFooter phone={config.supportPhone} />

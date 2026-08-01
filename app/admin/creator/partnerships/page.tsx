@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { CreatorGuard } from '@/components/admin/CreatorGuard';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
+import { safeImageSrc } from '@/lib/utils/image';
 
 interface Partnership {
   id: string;
@@ -168,9 +170,11 @@ function PartnershipsContent() {
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-4 flex-1 min-w-0">
-                      <img
-                        src={p.logo}
+                      <Image
+                        src={safeImageSrc(p.logo)}
                         alt={p.name}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 rounded-lg object-cover border border-neutral-200 shrink-0"
                       />
                       <div className="flex-1 min-w-0">

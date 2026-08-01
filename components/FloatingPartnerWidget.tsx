@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { safeImageSrc } from '@/lib/utils/image';
 
 interface Partnership {
   id: string;
@@ -95,10 +97,12 @@ export function FloatingPartnerWidget() {
         >
           {/* Banner - Full Width */}
           <div className="h-24 bg-gradient-to-r from-primary-100 to-primary-200 relative overflow-hidden">
-            <img
-              src={partner.banner}
+            <Image
+              src={safeImageSrc(partner.banner)}
               alt={partner.name}
-              className="w-full h-full object-cover"
+              fill
+              sizes="384px"
+              className="object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}
@@ -109,11 +113,13 @@ export function FloatingPartnerWidget() {
           <div className="p-5 space-y-4 flex flex-col">
             {/* Logo and Name */}
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-lg border-2 border-primary-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-md">
-                <img
-                  src={partner.logo}
+              <div className="relative w-14 h-14 rounded-lg border-2 border-primary-200 overflow-hidden bg-white flex items-center justify-center flex-shrink-0 shadow-md">
+                <Image
+                  src={safeImageSrc(partner.logo)}
                   alt={partner.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="56px"
+                  className="object-cover"
                   onError={(e) => {
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
@@ -171,15 +177,17 @@ export function FloatingPartnerWidget() {
         {/* Logo Container - Main Clickable */}
         <div className="relative">
           {/* Bounce Animation */}
-          <div className="w-16 h-16 rounded-full shadow-2xl overflow-hidden border-2 border-white bg-gradient-to-br from-white to-primary-50 flex items-center justify-center transition-all duration-300 group-hover:shadow-3xl group-hover:scale-125 hover:animate-bounce"
+          <div className="relative w-16 h-16 rounded-full shadow-2xl overflow-hidden border-2 border-white bg-gradient-to-br from-white to-primary-50 flex items-center justify-center transition-all duration-300 group-hover:shadow-3xl group-hover:scale-125 hover:animate-bounce"
             style={{
               animation: 'float 3s ease-in-out infinite',
             }}
           >
-            <img
-              src={partner.logo}
+            <Image
+              src={safeImageSrc(partner.logo)}
               alt={partner.name}
-              className="w-full h-full object-cover"
+              fill
+              sizes="64px"
+              className="object-cover"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none';
               }}

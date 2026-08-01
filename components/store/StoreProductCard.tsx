@@ -1,5 +1,7 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { Product } from '@/lib/mock/products';
+import { safeImageSrc } from '@/lib/utils/image';
 
 export function StoreProductCard({ product }: { product: Product }) {
   const discount = product.originalPrice
@@ -12,12 +14,12 @@ export function StoreProductCard({ product }: { product: Product }) {
       className="group bg-white rounded-xl border border-neutral-200 overflow-hidden hover:shadow-lg hover:border-primary-300 transition-all flex flex-col"
     >
       <div className="relative aspect-square bg-neutral-50 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={product.image}
+        <Image
+          src={safeImageSrc(product.image)}
           alt={product.name}
-          loading="lazy"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          fill
+          sizes="(min-width: 1024px) 25vw, 50vw"
+          className="object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute top-2 left-2 flex flex-col gap-1">
           {discount > 0 && (

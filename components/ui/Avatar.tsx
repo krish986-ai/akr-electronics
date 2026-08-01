@@ -1,4 +1,6 @@
+import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
+import { isValidImageSrc } from '@/lib/utils/image';
 
 interface AvatarProps {
   src?: string;
@@ -14,15 +16,14 @@ export function Avatar({ src, alt, initials, size = 'md', badge }: AvatarProps) 
     md: 'w-10 h-10 text-sm',
     lg: 'w-12 h-12 text-base',
   };
+  const sizePx = { sm: '32px', md: '40px', lg: '48px' };
 
   return (
     <div className="relative inline-block">
-      {src ? (
-        <img
-          src={src}
-          alt={alt}
-          className={cn('rounded-full bg-neutral-200 object-cover', sizeClasses[size])}
-        />
+      {isValidImageSrc(src) ? (
+        <div className={cn('relative rounded-full overflow-hidden bg-neutral-200', sizeClasses[size])}>
+          <Image src={src} alt={alt ?? ''} fill sizes={sizePx[size]} className="object-cover" />
+        </div>
       ) : (
         <div
           className={cn(

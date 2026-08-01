@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { heroBanners, HeroBanner } from '@/lib/mock/products';
+import { safeImageSrc } from '@/lib/utils/image';
 
 export function HeroCarousel({ banners: bannersProp }: { banners?: HeroBanner[] }) {
   const banners = bannersProp && bannersProp.length > 0 ? bannersProp : heroBanners;
@@ -23,11 +25,13 @@ export function HeroCarousel({ banners: bannersProp }: { banners?: HeroBanner[] 
     >
       {banner.image && (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={banner.image}
+          <Image
+            src={safeImageSrc(banner.image)}
             alt=""
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            priority={index === 0}
+            sizes="100vw"
+            className="object-cover"
           />
           <div className="absolute inset-0 bg-black/45" />
         </>

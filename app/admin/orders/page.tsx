@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
+import { safeImageSrc } from '@/lib/utils/image';
 import {
   ORDER_STATUSES,
   OrderStatus,
@@ -370,10 +372,11 @@ function AdminOrderCard({
             <div className="space-y-2">
               {order.items.map(item => (
                 <div key={item.productId} className="flex items-center gap-2 text-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.image}
+                  <Image
+                    src={safeImageSrc(item.image)}
                     alt={item.name}
+                    width={36}
+                    height={36}
                     className="w-9 h-9 rounded object-cover border border-neutral-200"
                   />
                   <span className="flex-1 text-neutral-800">{item.name}</span>

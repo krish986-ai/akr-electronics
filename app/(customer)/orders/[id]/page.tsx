@@ -2,9 +2,11 @@
 
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { orderTimeline, STATUS_BADGE_CLASSES, PlacedOrder } from '@/lib/stores/orders';
 import { fetchMyOrder } from '@/lib/orders/service';
 import { useAuth } from '@/lib/auth/client';
+import { safeImageSrc } from '@/lib/utils/image';
 
 export default function OrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -99,10 +101,11 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
             <div className="space-y-3">
               {order.items.map(item => (
                 <div key={item.productId} className="flex items-center gap-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.image}
+                  <Image
+                    src={safeImageSrc(item.image)}
                     alt={item.name}
+                    width={56}
+                    height={56}
                     className="w-14 h-14 rounded-lg object-cover border border-neutral-200"
                   />
                   <div className="flex-1 min-w-0">

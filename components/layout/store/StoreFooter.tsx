@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 const COLUMNS = [
   {
@@ -84,10 +85,11 @@ export function StoreFooter({ phone = DEFAULT_PHONE }: { phone?: string }) {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 grid grid-cols-2 md:grid-cols-6 gap-8">
         <div className="col-span-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src="/images/logo-full.png"
             alt="A.K.R Electronics"
+            width={892}
+            height={460}
             className="w-44 h-auto rounded-xl mb-4"
           />
           <p className="text-sm text-neutral-400 mb-4">

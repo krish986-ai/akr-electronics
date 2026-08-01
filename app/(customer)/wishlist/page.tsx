@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Product } from '@/lib/mock/products';
 import { getProducts } from '@/lib/data/catalog';
 import { useWishlistStore } from '@/lib/stores/wishlist';
 import { useCartStore } from '@/lib/stores/cart';
+import { safeImageSrc } from '@/lib/utils/image';
 
 export default function WishlistPage() {
   const { productIds, remove } = useWishlistStore();
@@ -55,9 +57,14 @@ export default function WishlistPage() {
               key={product.id}
               className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex flex-col"
             >
-              <Link href={`/products/${product.id}`} className="block aspect-square bg-neutral-50">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+              <Link href={`/products/${product.id}`} className="relative block aspect-square bg-neutral-50">
+                <Image
+                  src={safeImageSrc(product.image)}
+                  alt={product.name}
+                  fill
+                  sizes="(min-width: 768px) 25vw, 50vw"
+                  className="object-cover"
+                />
               </Link>
               <div className="p-3 flex flex-col flex-1">
                 <Link

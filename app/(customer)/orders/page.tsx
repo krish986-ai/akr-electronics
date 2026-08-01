@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth/client';
 import { STATUS_BADGE_CLASSES, PlacedOrder } from '@/lib/stores/orders';
 import { fetchMyOrders } from '@/lib/orders/service';
+import { safeImageSrc } from '@/lib/utils/image';
 
 export default function OrdersPage() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -106,11 +108,12 @@ export default function OrdersPage() {
             </div>
             <div className="flex items-center gap-2 mt-4">
               {order.items.slice(0, 4).map(item => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   key={item.productId}
-                  src={item.image}
+                  src={safeImageSrc(item.image)}
                   alt={item.name}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-lg object-cover border border-neutral-200"
                 />
               ))}

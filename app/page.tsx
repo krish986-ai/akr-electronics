@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { StoreShell } from '@/components/layout/store/StoreShell';
 import { HeroCarousel } from '@/components/store/HeroCarousel';
+import { CategoryStrip } from '@/components/store/CategoryStrip';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { FloatingPartnerWidget } from '@/components/FloatingPartnerWidget';
 import { FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
@@ -70,18 +71,7 @@ export default async function HomePage() {
             View All →
           </Link>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          {categoryTree.map(cat => (
-            <Link
-              key={cat.id}
-              href={`/products?category=${cat.slug}`}
-              className="group p-4 bg-white border border-neutral-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all text-center"
-            >
-              <div className="text-3xl mb-2">{cat.icon}</div>
-              <p className="font-medium text-xs text-neutral-900 group-hover:text-primary-600">{cat.name}</p>
-            </Link>
-          ))}
-        </div>
+        <CategoryStrip categories={categoryTree} />
       </section>
 
       <ProductRail title="Featured Products" items={featured} href="/products" />

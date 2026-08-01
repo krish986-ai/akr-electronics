@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import { getProducts, resetCatalogCache } from '@/lib/data/catalog';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
+import { safeImageSrc } from '@/lib/utils/image';
 import { Brand, KitItem, Product, brands, GST_RATE_DEFAULT, STANDARD_WARRANTY } from '@/lib/mock/products';
 
 const KIT_CATEGORY_SLUG = 'iot-starter-kits';
@@ -258,8 +260,7 @@ export default function AdminStarterKitsPage() {
                 <tr key={kit.id} className="hover:bg-neutral-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={kit.image} alt="" className="w-10 h-10 rounded-lg object-cover border border-neutral-200" />
+                      <Image src={safeImageSrc(kit.image)} alt="" width={40} height={40} className="w-10 h-10 rounded-lg object-cover border border-neutral-200" />
                       <span className="font-medium text-neutral-900">{kit.name}</span>
                       {kit.isFeatured && <Chip text="Featured" cls="bg-primary-50 text-primary-700" />}
                     </div>
@@ -413,8 +414,7 @@ export default function AdminStarterKitsPage() {
                         disabled={editor.items.some(i => i.productId === p.id)}
                         className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.image} alt="" className="w-7 h-7 rounded object-cover border border-neutral-200 shrink-0" />
+                        <Image src={safeImageSrc(p.image)} alt="" width={28} height={28} className="w-7 h-7 rounded object-cover border border-neutral-200 shrink-0" />
                         <span className="flex-1 text-xs text-neutral-800 line-clamp-1">{p.name}</span>
                         <span className="text-xs text-neutral-400 shrink-0">₹{p.price.toLocaleString('en-IN')}</span>
                       </button>
@@ -435,8 +435,7 @@ export default function AdminStarterKitsPage() {
                       if (!product) return null;
                       return (
                         <div key={item.productId} className="flex items-center gap-2 px-2 py-1.5">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={product.image} alt="" className="w-7 h-7 rounded object-cover border border-neutral-200 shrink-0" />
+                          <Image src={safeImageSrc(product.image)} alt="" width={28} height={28} className="w-7 h-7 rounded object-cover border border-neutral-200 shrink-0" />
                           <span className="flex-1 text-xs text-neutral-800 line-clamp-1">{product.name}</span>
                           <input
                             type="number"

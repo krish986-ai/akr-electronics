@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { cn } from '@/lib/utils/cn';
+import { safeImageSrc } from '@/lib/utils/image';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { RadioGroup } from '@/components/ui/Radio';
 import { useCartStore, cartSubtotal } from '@/lib/stores/cart';
+import { useBuyNowStore } from '@/lib/stores/buy-now';
 import { nextOrderNumber, PlacedOrder } from '@/lib/stores/orders';
 import { coupons, Coupon } from '@/lib/mock/products';
 import { useAuth } from '@/lib/auth/client';
@@ -43,7 +46,10 @@ function loadRazorpayScript(): Promise<boolean> {
 }
 
 export default function CheckoutPage() {
-  const { items, clearCart } = useCartStore();
+  const { items: cartItems, clearCart } = useCartStore();
+  const buyNowItem = useBuyNowStore(state => state.item);
+  const clearBuyNow = useBuyNowStore(state => state.clearBuyNow);
+  const items = buyNowItem ? [buyNowItem] : cartItems;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -172,7 +178,11 @@ export default function CheckoutPage() {
       await submitOrder(user.id, order);
       setPlacedOrderId(orderNumber);
       setPlacedPendingQr(extras.status === 'PENDING');
-      clearCart();
+      if (buyNowItem) {
+        clearBuyNow();
+      } else {
+        clearCart();
+      }
     } catch (err) {
       setPlaceError(
         err instanceof Error && err.message
@@ -359,7 +369,14 @@ export default function CheckoutPage() {
 
   return (
     <div className={cn(container, 'py-12')}>
-      <h1 className="text-4xl font-bold text-neutral-900 mb-8">Checkout</h1>
+      <h1 className={cn('text-4xl font-bold text-neutral-900', buyNowItem ? 'mb-2' : 'mb-8')}>
+        Checkout
+      </h1>
+      {buyNowItem && (
+        <p className="text-sm text-neutral-500 mb-6">
+          Buying this item now — the rest of your cart is untouched.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Checkout */}
@@ -540,10 +557,11 @@ export default function CheckoutPage() {
                 {paymentMethod === 'qr' && paySettings.qrEnabled && paySettings.qrImage && (
                   <div className="mt-4 border border-neutral-200 rounded-xl p-4 space-y-4">
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={paySettings.qrImage}
+                      <Image
+                        src={safeImageSrc(paySettings.qrImage)}
                         alt="UPI payment QR code"
+                        width={160}
+                        height={160}
                         className="w-40 h-40 object-contain border border-neutral-200 rounded-lg bg-white"
                       />
                       <div className="flex-1 space-y-2">

@@ -2,9 +2,11 @@
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { Product } from '@/lib/mock/products';
 import { getProducts } from '@/lib/data/catalog';
+import { safeImageSrc } from '@/lib/utils/image';
 
 const MAX_COMPARE = 4;
 
@@ -71,7 +73,13 @@ function ComparePageInner() {
                 {selected.map(p => (
                   <th key={p.id} className="p-3 min-w-[180px]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={p.image} alt={p.name} className="w-20 h-20 object-cover rounded-lg mx-auto" />
+                    <Image
+                      src={safeImageSrc(p.image)}
+                      alt={p.name}
+                      width={80}
+                      height={80}
+                      className="w-20 h-20 object-cover rounded-lg mx-auto"
+                    />
                     <Link
                       href={`/products/${p.id}`}
                       className="block mt-2 font-semibold text-neutral-900 hover:text-primary-600"

@@ -2,8 +2,10 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils/cn';
+import { safeImageSrc } from '@/lib/utils/image';
 import { brands, categoryTree, CategoryNode, Product } from '@/lib/mock/products';
 import { getCatalogPage, getCategories, getBrands } from '@/lib/data/catalog';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
@@ -58,6 +60,14 @@ function ProductsPageInner() {
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState(MAX_PRICE);
   const [sortBy, setSortBy] = useState('popular');
   const [currentPage, setCurrentPage] = useState(1);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    document.body.style.overflow = filtersOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [filtersOpen]);
 
   useEffect(() => {
     Promise.all([getCategories(), getBrands()]).then(([cats, brs]) => {
@@ -105,6 +115,12 @@ function ProductsPageInner() {
   }, [debouncedSearch, selectedCategory, selectedBrand, debouncedMaxPrice, sortBy, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
+  const activeFilterCount = [
+    selectedCategory,
+    selectedBrand,
+    searchQuery,
+    maxPrice < MAX_PRICE,
+  ].filter(Boolean).length;
 
   const resetFilters = () => {
     setSearchQuery('');
@@ -133,94 +149,55 @@ function ProductsPageInner() {
         {activeCategoryName ?? 'IoT Components & Kits'}
       </h1>
 
+      <div className="lg:hidden sticky top-28 sm:top-16 z-30 -mx-4 sm:-mx-6 px-4 sm:px-6 py-2.5 mb-4 bg-white/95 backdrop-blur border-b border-neutral-200 flex items-center gap-2">
+        <button
+          onClick={() => setFiltersOpen(true)}
+          className="relative flex-1 h-10 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 flex items-center justify-center gap-2 active:bg-neutral-50"
+        >
+          <span aria-hidden="true">☰</span> Filters
+          {activeFilterCount > 0 && (
+            <span className="grid place-items-center min-w-[18px] h-[18px] px-1 rounded-full bg-primary-600 text-white text-[10px] font-bold">
+              {activeFilterCount}
+            </span>
+          )}
+        </button>
+        <select
+          value={sortBy}
+          onChange={e => {
+            setSortBy(e.target.value);
+            setCurrentPage(1);
+          }}
+          aria-label="Sort by"
+          className="flex-1 h-10 rounded-lg border border-neutral-300 px-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="popular">Most Popular</option>
+          <option value="newest">Newest</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="rating">Highest Rated</option>
+        </select>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <aside className="lg:col-span-1 space-y-6">
-          <div>
-            <h3 className="font-semibold text-neutral-900 text-sm mb-3">Search</h3>
-            <input
-              value={searchQuery}
-              onChange={e => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              placeholder="Search products..."
-              className="w-full h-10 rounded-lg border border-neutral-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-neutral-900 text-sm mb-3">Category</h3>
-            <div className="space-y-1">
-              <FilterButton active={!selectedCategory} onClick={() => { setSelectedCategory(''); setCurrentPage(1); }}>
-                All Categories
-              </FilterButton>
-              {categories.map(cat => (
-                <FilterButton
-                  key={cat.id}
-                  active={resolveCategorySlug(selectedCategory, categories) === cat.slug}
-                  onClick={() => { setSelectedCategory(cat.slug); setCurrentPage(1); }}
-                >
-                  {cat.image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={cat.image}
-                      alt=""
-                      className="inline-block w-4 h-4 rounded object-cover mr-1 align-text-bottom"
-                    />
-                  ) : (
-                    <>{cat.icon} </>
-                  )}
-                  {cat.name}
-                </FilterButton>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-neutral-900 text-sm mb-3">Brand</h3>
-            <div className="space-y-1">
-              <FilterButton active={!selectedBrand} onClick={() => { setSelectedBrand(''); setCurrentPage(1); }}>
-                All Brands
-              </FilterButton>
-              {brandsList.map(b => (
-                <FilterButton
-                  key={b.id}
-                  active={selectedBrand === b.slug}
-                  onClick={() => { setSelectedBrand(b.slug); setCurrentPage(1); }}
-                >
-                  {b.name}
-                </FilterButton>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="font-semibold text-neutral-900 text-sm mb-3">Max Price</h3>
-            <input
-              type="range"
-              min={100}
-              max={MAX_PRICE}
-              step={100}
-              value={maxPrice}
-              onChange={e => {
-                setMaxPrice(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="w-full accent-primary-600"
-            />
-            <p className="text-xs text-neutral-500 mt-1">Up to ₹{maxPrice.toLocaleString('en-IN')}</p>
-          </div>
-
-          <button
-            onClick={resetFilters}
-            className="w-full h-10 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-          >
-            Reset Filters
-          </button>
+        <aside className="hidden lg:block lg:col-span-1 space-y-6">
+          <FiltersPanel
+            searchQuery={searchQuery}
+            onSearchChange={v => { setSearchQuery(v); setCurrentPage(1); }}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={v => { setSelectedCategory(v); setCurrentPage(1); }}
+            resolveCategorySlug={resolveCategorySlug}
+            brandsList={brandsList}
+            selectedBrand={selectedBrand}
+            onSelectBrand={v => { setSelectedBrand(v); setCurrentPage(1); }}
+            maxPrice={maxPrice}
+            onMaxPriceChange={v => { setMaxPrice(v); setCurrentPage(1); }}
+            onReset={resetFilters}
+          />
         </aside>
 
         <div className="lg:col-span-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+          <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 mb-6">
             <p className="text-sm text-neutral-500">
               {total} product{total === 1 ? '' : 's'}
               {searchQuery && searchMode === 'exact' && (
@@ -244,6 +221,14 @@ function ProductsPageInner() {
               <option value="rating">Highest Rated</option>
             </select>
           </div>
+          <p className="lg:hidden text-sm text-neutral-500 mb-4">
+            {total} product{total === 1 ? '' : 's'}
+            {searchQuery && searchMode === 'exact' && (
+              <> found for “<span className="font-medium text-neutral-900">{searchQuery}</span>”</>
+            )}
+            {searchQuery && searchMode && searchMode !== 'exact' && <> shown</>}
+            {!searchQuery && <> found</>}
+          </p>
 
           {searchQuery && searchMode && searchMode !== 'exact' && (
             <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
@@ -305,6 +290,171 @@ function ProductsPageInner() {
           )}
         </div>
       </div>
+
+      <div
+        className={cn(
+          'lg:hidden fixed inset-0 z-50 bg-black/50 transition-opacity duration-300',
+          filtersOpen ? 'opacity-100' : 'pointer-events-none opacity-0'
+        )}
+        onClick={() => setFiltersOpen(false)}
+        aria-hidden="true"
+      />
+      <div
+        className={cn(
+          'lg:hidden fixed inset-x-0 bottom-0 z-50 max-h-[85vh] flex flex-col rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out',
+          filtersOpen ? 'translate-y-0' : 'translate-y-full'
+        )}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filters"
+      >
+        <div className="flex items-center justify-between px-4 h-14 border-b border-neutral-200 shrink-0">
+          <h2 className="font-bold text-neutral-900">Filters</h2>
+          <button
+            aria-label="Close filters"
+            onClick={() => setFiltersOpen(false)}
+            className="w-9 h-9 grid place-items-center rounded-md text-neutral-500 hover:bg-neutral-100 text-lg"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+          <FiltersPanel
+            searchQuery={searchQuery}
+            onSearchChange={v => { setSearchQuery(v); setCurrentPage(1); }}
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={v => { setSelectedCategory(v); setCurrentPage(1); }}
+            resolveCategorySlug={resolveCategorySlug}
+            brandsList={brandsList}
+            selectedBrand={selectedBrand}
+            onSelectBrand={v => { setSelectedBrand(v); setCurrentPage(1); }}
+            maxPrice={maxPrice}
+            onMaxPriceChange={v => { setMaxPrice(v); setCurrentPage(1); }}
+            onReset={resetFilters}
+          />
+        </div>
+        <div className="shrink-0 flex gap-3 px-4 py-3 border-t border-neutral-200 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <button
+            onClick={resetFilters}
+            className="h-11 px-4 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            Reset
+          </button>
+          <button
+            onClick={() => setFiltersOpen(false)}
+            className="flex-1 h-11 rounded-lg bg-primary-600 text-white text-sm font-semibold hover:bg-primary-700"
+          >
+            Show {total} Result{total === 1 ? '' : 's'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FiltersPanel({
+  searchQuery,
+  onSearchChange,
+  categories,
+  selectedCategory,
+  onSelectCategory,
+  resolveCategorySlug,
+  brandsList,
+  selectedBrand,
+  onSelectBrand,
+  maxPrice,
+  onMaxPriceChange,
+  onReset,
+}: {
+  searchQuery: string;
+  onSearchChange: (v: string) => void;
+  categories: CategoryNode[];
+  selectedCategory: string;
+  onSelectCategory: (v: string) => void;
+  resolveCategorySlug: (slug: string, categories: CategoryNode[]) => string;
+  brandsList: { id: string; name: string; slug: string }[];
+  selectedBrand: string;
+  onSelectBrand: (v: string) => void;
+  maxPrice: number;
+  onMaxPriceChange: (v: number) => void;
+  onReset: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-semibold text-neutral-900 text-sm mb-3">Search</h3>
+        <input
+          value={searchQuery}
+          onChange={e => onSearchChange(e.target.value)}
+          placeholder="Search products..."
+          className="w-full h-10 rounded-lg border border-neutral-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+        />
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-neutral-900 text-sm mb-3">Category</h3>
+        <div className="space-y-1">
+          <FilterButton active={!selectedCategory} onClick={() => onSelectCategory('')}>
+            All Categories
+          </FilterButton>
+          {categories.map(cat => (
+            <FilterButton
+              key={cat.id}
+              active={resolveCategorySlug(selectedCategory, categories) === cat.slug}
+              onClick={() => onSelectCategory(cat.slug)}
+            >
+              {cat.image ? (
+                <Image
+                  src={safeImageSrc(cat.image)}
+                  alt=""
+                  width={16}
+                  height={16}
+                  className="inline-block w-4 h-4 rounded object-cover mr-1 align-text-bottom"
+                />
+              ) : (
+                <>{cat.icon} </>
+              )}
+              {cat.name}
+            </FilterButton>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-neutral-900 text-sm mb-3">Brand</h3>
+        <div className="space-y-1">
+          <FilterButton active={!selectedBrand} onClick={() => onSelectBrand('')}>
+            All Brands
+          </FilterButton>
+          {brandsList.map(b => (
+            <FilterButton key={b.id} active={selectedBrand === b.slug} onClick={() => onSelectBrand(b.slug)}>
+              {b.name}
+            </FilterButton>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold text-neutral-900 text-sm mb-3">Max Price</h3>
+        <input
+          type="range"
+          min={100}
+          max={MAX_PRICE}
+          step={100}
+          value={maxPrice}
+          onChange={e => onMaxPriceChange(Number(e.target.value))}
+          className="w-full accent-primary-600"
+        />
+        <p className="text-xs text-neutral-500 mt-1">Up to ₹{maxPrice.toLocaleString('en-IN')}</p>
+      </div>
+
+      <button
+        onClick={onReset}
+        className="w-full h-10 rounded-lg border border-neutral-300 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+      >
+        Reset Filters
+      </button>
     </div>
   );
 }
