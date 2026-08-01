@@ -23,6 +23,7 @@ const productInputSchema = z.object({
   specifications: z.record(z.string()).default({}),
   features: z.array(z.string()).default([]),
   packageIncludes: z.array(z.string()).optional(),
+  keywords: z.array(z.string()).default([]),
   warrantyDays: z.number().int().min(0).default(STANDARD_WARRANTY.days),
   countryOfOrigin: z.string().min(2),
   stock: z.number().int().min(0),

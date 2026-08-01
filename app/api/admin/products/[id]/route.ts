@@ -31,6 +31,7 @@ const productUpdateSchema = z.object({
   specifications: z.record(z.string()).optional(),
   features: z.array(z.string()).optional(),
   packageIncludes: z.array(z.string()).optional(),
+  keywords: z.array(z.string()).optional(),
   warrantyDays: z.number().int().min(0).optional(),
   countryOfOrigin: z.string().min(2).optional(),
   stock: z.number().int().min(0).optional(),

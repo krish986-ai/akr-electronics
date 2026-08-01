@@ -217,11 +217,14 @@ function fuzzyWordMatches(query: string, target: string): boolean {
   return levenshtein(query, target) <= maxDistance;
 }
 
-// Description is excluded here (unbounded length would dominate scoring
-// cost) — it's only used by the cheap exact-substring pass below.
+// Typo-tolerant fallback fields. Description is excluded (unbounded length
+// would dominate scoring cost, and its free-form text is the main source of
+// false-positive noise) — it's only used by the cheap strict pass below.
+// Keywords are admin-curated aliases, so they're weighted like the name.
 function fuzzySearchFields(product: Product): { words: string[]; weight: number }[] {
   return [
     { words: tokenizeSearchable(product.name), weight: 4 },
+    { words: tokenizeSearchable((product.keywords ?? []).join(' ')), weight: 4 },
     { words: tokenizeSearchable(product.sku), weight: 3 },
     { words: tokenizeSearchable(product.brand), weight: 2 },
     { words: tokenizeSearchable(product.category), weight: 2 },
@@ -237,6 +240,52 @@ function fuzzyScore(product: Product, queryWords: string[]): number {
       for (const word of words) {
         if (word === queryWord) best = Math.max(best, weight * 3);
         else if (fuzzyWordMatches(queryWord, word)) best = Math.max(best, weight);
+      }
+    }
+    total += best;
+  }
+  return total;
+}
+
+// Strict (non-typo-tolerant) relevance scoring, used for the primary search
+// tier. Unlike a raw substring check against the whole product, this scores
+// and ranks matches instead of treating every hit as equally relevant —
+// description is included but weighted lowest, since it's free-form text
+// that mentions many generic compatibility terms (e.g. nearly every hobby
+// component's description says "Arduino compatible"), which previously let
+// a single common word flood results with mostly-irrelevant products sorted
+// by review count instead of by how well they actually match.
+function strictSearchFields(product: Product): { words: string[]; weight: number }[] {
+  return [
+    { words: tokenizeSearchable(product.name), weight: 6 },
+    { words: tokenizeSearchable((product.keywords ?? []).join(' ')), weight: 5 },
+    { words: tokenizeSearchable(product.sku), weight: 4 },
+    { words: tokenizeSearchable(product.brand), weight: 2 },
+    { words: tokenizeSearchable(product.category), weight: 2 },
+    { words: tokenizeSearchable(product.description), weight: 1 },
+  ];
+}
+
+function strictScore(product: Product, queryWords: string[]): number {
+  const fields = strictSearchFields(product);
+  let total = 0;
+  for (const queryWord of queryWords) {
+    let best = 0;
+    for (const { words, weight } of fields) {
+      for (const word of words) {
+        if (word === queryWord) {
+          best = Math.max(best, weight * 3);
+        } else if (queryWord.length >= 3 && word.includes(queryWord)) {
+          // One-directional on purpose: the *query* must be a substring of
+          // the field word (so "sens" still finds "sensor"). Allowing the
+          // reverse — a field word being a substring of the query — lets a
+          // long or oddly-concatenated query accidentally contain a common
+          // short word (e.g. "real" inside "xyzabc123notreal" matching any
+          // description that happens to say "real-time"), which floods
+          // results with false positives that have nothing to do with the
+          // actual search term.
+          best = Math.max(best, weight);
+        }
       }
     }
     total += best;
@@ -270,67 +319,80 @@ export async function queryServerProducts(queryInput: CatalogQuery): Promise<Cat
   const matchesPrice = (p: Product) => maxPrice === undefined || p.price <= maxPrice;
   const matchesFilters = (p: Product) => matchesCategory(p) && matchesBrand(p) && matchesPrice(p);
 
-  const matchesSearchExact = (p: Product) =>
-    !search ||
-    p.name.toLowerCase().includes(search) ||
-    p.description.toLowerCase().includes(search) ||
-    p.brand.toLowerCase().includes(search) ||
-    p.sku.toLowerCase().includes(search);
+  let filtered = products.filter(matchesFilters);
+  let searchMode: SearchMode | undefined;
+  let scoreById: Map<string, number> | null = null;
 
-  let filtered = products.filter(p => matchesSearchExact(p) && matchesFilters(p));
-  let searchMode: SearchMode | undefined = search ? 'exact' : undefined;
-
-  // The typed term matched nothing (typo, wrong word, too specific) — widen
-  // the net in stages: fuzzy-match within the user's chosen filters, then
-  // fuzzy-match ignoring filters, then fall back to generally popular items.
+  // Search runs in widening stages so a query never dead-ends: strict
+  // relevance match (ranked, not just a yes/no substring check) within the
+  // user's chosen filters, then typo-tolerant fuzzy match within filters,
+  // then fuzzy ignoring filters (so keywords still surface related products
+  // even outside the selected category/brand), then generally popular items.
   // All of this runs over the already-cached product array, so it costs CPU
   // only and never touches Firestore.
-  if (search && filtered.length === 0) {
+  if (search) {
     const queryWords = tokenizeSearchable(search);
-    const scored = products
-      .map(product => ({ product, score: fuzzyScore(product, queryWords) }))
-      .filter(entry => entry.score > 0)
-      .sort((a, b) => b.score - a.score);
+    const strictScored = products
+      .map(product => ({ product, score: strictScore(product, queryWords) }))
+      .filter(entry => entry.score > 0);
 
-    const withinFilters = scored.filter(entry => matchesFilters(entry.product));
-    if (withinFilters.length > 0) {
-      searchMode = 'fuzzy';
-      filtered = withinFilters.map(entry => entry.product);
-    } else if (scored.length > 0) {
-      searchMode = 'related';
-      filtered = scored.map(entry => entry.product);
+    const strictWithinFilters = strictScored.filter(entry => matchesFilters(entry.product));
+    if (strictWithinFilters.length > 0) {
+      searchMode = 'exact';
+      strictWithinFilters.sort((a, b) => b.score - a.score);
+      filtered = strictWithinFilters.map(entry => entry.product);
+      scoreById = new Map(strictWithinFilters.map(entry => [entry.product.id, entry.score]));
     } else {
-      searchMode = 'popular';
-      const pool = products.filter(matchesFilters);
-      filtered = (pool.length > 0 ? pool : products)
-        .slice()
-        .sort(
-          (a, b) =>
-            (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0) || b.rating - a.rating || b.reviews - a.reviews
-        )
-        .slice(0, 24);
+      const fuzzyScored = products
+        .map(product => ({ product, score: fuzzyScore(product, queryWords) }))
+        .filter(entry => entry.score > 0)
+        .sort((a, b) => b.score - a.score);
+
+      const fuzzyWithinFilters = fuzzyScored.filter(entry => matchesFilters(entry.product));
+      if (fuzzyWithinFilters.length > 0) {
+        searchMode = 'fuzzy';
+        filtered = fuzzyWithinFilters.map(entry => entry.product);
+      } else if (fuzzyScored.length > 0) {
+        searchMode = 'related';
+        filtered = fuzzyScored.map(entry => entry.product);
+      } else {
+        searchMode = 'popular';
+        const pool = products.filter(matchesFilters);
+        filtered = (pool.length > 0 ? pool : products)
+          .slice()
+          .sort(
+            (a, b) =>
+              (b.isBestseller ? 1 : 0) - (a.isBestseller ? 1 : 0) || b.rating - a.rating || b.reviews - a.reviews
+          )
+          .slice(0, 24);
+      }
     }
   }
 
-  // Fallback tiers are already ordered by relevance/popularity; an explicit
-  // sort only applies once there's a real (exact) match to sort within.
-  if (searchMode === 'exact' || !search) {
-    switch (queryInput.sort) {
-      case 'price-low':
-        filtered.sort((a, b) => a.price - b.price);
-        break;
-      case 'price-high':
-        filtered.sort((a, b) => b.price - a.price);
-        break;
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'newest':
-        filtered.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
-        break;
-      default:
+  // An explicit sort choice always wins. Otherwise: exact-tier search results
+  // rank by relevance score (best match first, not best-selling-regardless-
+  // of-relevance); fuzzy/related/popular tiers are already ordered by their
+  // own relevance/popularity from the widening step above; plain browsing
+  // (no search) defaults to most-reviewed first.
+  switch (queryInput.sort) {
+    case 'price-low':
+      filtered.sort((a, b) => a.price - b.price);
+      break;
+    case 'price-high':
+      filtered.sort((a, b) => b.price - a.price);
+      break;
+    case 'rating':
+      filtered.sort((a, b) => b.rating - a.rating);
+      break;
+    case 'newest':
+      filtered.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
+      break;
+    default:
+      if (searchMode === 'exact' && scoreById) {
+        filtered.sort((a, b) => (scoreById!.get(b.id) ?? 0) - (scoreById!.get(a.id) ?? 0) || b.reviews - a.reviews);
+      } else if (!search) {
         filtered.sort((a, b) => b.reviews - a.reviews);
-    }
+      }
   }
 
   const pageSize = Math.min(Math.max(queryInput.pageSize ?? 12, 1), 48);

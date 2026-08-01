@@ -35,6 +35,10 @@ export interface Product {
   specifications: Record<string, string>;
   features: string[];
   packageIncludes?: string[];
+  // Admin-curated search aliases (synonyms, spec fragments, common misspellings,
+  // "also known as" terms) so shoppers who don't know the exact product name
+  // can still find it — weighted highly in search, alongside name/SKU.
+  keywords?: string[];
   warranty: WarrantyInfo;
   countryOfOrigin: string;
   stock: number;

@@ -24,6 +24,7 @@ interface EditorState {
   warrantyDays: string;
   featuresText: string;
   specsText: string;
+  keywordsText: string;
   isNew: boolean;
   isBestseller: boolean;
   isFeatured: boolean;
@@ -44,6 +45,7 @@ const EMPTY_EDITOR: EditorState = {
   warrantyDays: String(STANDARD_WARRANTY.days),
   featuresText: '',
   specsText: '',
+  keywordsText: '',
   isNew: false,
   isBestseller: false,
   isFeatured: false,
@@ -68,6 +70,7 @@ function productToEditor(p: Product): EditorState {
     specsText: Object.entries(p.specifications)
       .map(([k, v]) => `${k}: ${v}`)
       .join('\n'),
+    keywordsText: (p.keywords ?? []).join(', '),
     isNew: Boolean(p.isNew),
     isBestseller: Boolean(p.isBestseller),
     isFeatured: Boolean(p.isFeatured),
@@ -106,6 +109,7 @@ function editorToPayload(e: EditorState, categories: CategoryNode[], brandsList:
     description: e.description.trim(),
     specifications,
     features: e.featuresText.split('\n').map(f => f.trim()).filter(Boolean),
+    keywords: e.keywordsText.split(',').map(k => k.trim()).filter(Boolean),
     warrantyDays: Number(e.warrantyDays),
     countryOfOrigin: e.countryOfOrigin.trim(),
     stock: Number(e.stock),
@@ -480,6 +484,17 @@ export default function AdminProductsPage() {
             </Field>
             <Field label="Features (one per line)" className="mt-4">
               <textarea rows={3} className={inputCls} value={editor.featuresText} onChange={e => setEditor({ ...editor, featuresText: e.target.value })} />
+            </Field>
+            <Field label="Search Keywords (comma-separated)" className="mt-4">
+              <input
+                className={inputCls}
+                value={editor.keywordsText}
+                onChange={e => setEditor({ ...editor, keywordsText: e.target.value })}
+                placeholder="e.g. TT motor gear, gearbox spare part, robot repair"
+              />
+              <p className="text-[11px] text-neutral-500 mt-1">
+                Synonyms, common misspellings, or terms customers might search that aren&apos;t in the name — helps them find this product even if they don&apos;t know its exact name.
+              </p>
             </Field>
             <Field label="Specifications (Key: Value per line)" className="mt-4">
               <textarea
