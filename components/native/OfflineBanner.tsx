@@ -42,7 +42,10 @@ export function OfflineBanner() {
   if (!isOffline) return null;
 
   return (
-    <Banner variant="warning" className="fixed top-0 left-0 right-0 z-notification">
+    <Banner
+      variant="warning"
+      className="fixed top-0 left-0 right-0 z-notification [padding-top:calc(env(safe-area-inset-top)+0.75rem)]"
+    >
       You&apos;re offline — showing saved content only. Cart, wishlist, and checkout need a
       connection.
     </Banner>

@@ -9,7 +9,12 @@ export function PushNotifications() {
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || !isAuthenticated || !user) return;
+    // FirebaseMessaging.getInstance() crashes natively when the Android app has
+    // no google-services.json / google-services Gradle plugin applied (no default
+    // FirebaseApp). Stay inert until that native setup is confirmed done, even
+    // though requestPermissions/register are otherwise safe to call.
+    const pushConfigured = process.env.NEXT_PUBLIC_PUSH_NOTIFICATIONS_ENABLED === 'true';
+    if (!pushConfigured || !Capacitor.isNativePlatform() || !isAuthenticated || !user) return;
 
     let cancelled = false;
     let registrationListener: PluginListenerHandle | undefined;

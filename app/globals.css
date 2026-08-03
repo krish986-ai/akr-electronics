@@ -16,6 +16,8 @@ body {
   background-color: #ffffff;
   color: #111827;
   overflow-x: clip;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 :root {
