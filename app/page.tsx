@@ -4,7 +4,7 @@ import { HeroCarousel } from '@/components/store/HeroCarousel';
 import { CategoryStrip } from '@/components/store/CategoryStrip';
 import { StoreProductCard } from '@/components/store/StoreProductCard';
 import { FloatingPartnerWidget } from '@/components/FloatingPartnerWidget';
-import { FREE_DELIVERY_THRESHOLD, Product } from '@/lib/mock/products';
+import { Product } from '@/lib/mock/products';
 import { getServerBanners, getServerProducts, getServerCategories } from '@/lib/data/server-catalog';
 
 const container = 'mx-auto max-w-7xl px-4 sm:px-6 lg:px-8';
@@ -18,13 +18,6 @@ export const metadata = {
   description:
     'Buy Arduino, Raspberry Pi, ESP32, sensors and complete IoT kits online. Genuine components, GST invoices, fast pan-India delivery.',
 };
-
-const TRUST_BADGES = [
-  { icon: '🛡️', title: '15-Day Warranty', text: 'Against manufacturing defects' },
-  { icon: '🚚', title: `Free Delivery ₹${FREE_DELIVERY_THRESHOLD}+`, text: 'Fast pan-India shipping' },
-  { icon: '💵', title: 'Cash on Delivery', text: 'Pay when it arrives' },
-  { icon: '🧾', title: 'GST Invoices', text: 'On every order' },
-];
 
 const SERVICES = [
   { icon: '🎓', title: 'Student Kits', text: 'Curated kits with project guides', href: '/products?category=kits' },
@@ -49,20 +42,6 @@ export default async function HomePage() {
       <FloatingPartnerWidget />
 
       <HeroCarousel banners={banners.filter(b => b.active !== false)} />
-
-      <section className="border-b border-neutral-200 bg-white">
-        <div className={`${container} grid grid-cols-2 lg:grid-cols-4 gap-4 py-6`}>
-          {TRUST_BADGES.map(b => (
-            <div key={b.title} className="flex items-center gap-3">
-              <span className="text-2xl">{b.icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-neutral-900">{b.title}</p>
-                <p className="text-xs text-neutral-500">{b.text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
       <section className={`${container} py-12`}>
         <div className="flex items-center justify-between mb-6">
