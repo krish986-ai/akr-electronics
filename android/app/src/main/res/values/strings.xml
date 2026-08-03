@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">A.K.R Electronics</string>
+    <string name="title_activity_main">A.K.R Electronics</string>
+    <string name="package_name">com.akrelectronics.app</string>
+    <string name="custom_url_scheme">com.akrelectronics.app</string>
+</resources>

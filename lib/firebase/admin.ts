@@ -39,4 +39,8 @@ export function getAdminStorage(): admin.storage.Storage {
   return getAdminApp().storage();
 }
 
+export function getAdminMessaging(): admin.messaging.Messaging {
+  return getAdminApp().messaging();
+}
+
 export default getAdminApp;

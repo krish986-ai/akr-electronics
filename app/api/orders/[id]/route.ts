@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { OrderRepository } from '@/lib/firestore/repositories';
+import { sendOrderStatusPush } from '@/lib/notifications/push';
 
 export async function GET(
   req: NextRequest,
@@ -71,6 +72,10 @@ export async function PUT(
     }
 
     const order = await OrderRepository.getById(id);
+
+    if (order && orderStatus) {
+      sendOrderStatusPush(order.userId, order.orderNumber, orderStatus).catch(() => {});
+    }
 
     return NextResponse.json({
       success: true,

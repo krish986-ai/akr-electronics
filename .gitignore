@@ -56,3 +56,13 @@ tsconfig.tsbuildinfo
 .env.local
 .env.production
 .vercel
+
+# Android build outputs / local signing (keystore never committed)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/google-services.json
+android/keystore.properties
+*.jks
+*.keystore
