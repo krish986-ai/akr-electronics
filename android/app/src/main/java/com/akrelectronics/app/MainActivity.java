@@ -1,18 +1,28 @@
 package com.akrelectronics.app;
 
 import android.os.Bundle;
-import androidx.core.view.WindowCompat;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // AndroidX Activity 1.10+ enables edge-to-edge by default regardless of
-        // targetSdk, which made the WebView's env(safe-area-inset-top) CSS value
-        // unreliable during scroll/repaint (content would slide under the status
-        // bar). Opt back out so the OS reserves system bar space natively —
-        // the WebView never draws there in the first place.
-        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+
+        // Android 15/16 enforce edge-to-edge unconditionally — the OS ignores
+        // any app-level opt-out (setDecorFitsSystemWindows has no effect there),
+        // so the WebView always draws full-bleed under the status/nav bars.
+        // Instead of fighting that, pad the WebView view itself by the real
+        // system bar insets so its content area physically excludes those
+        // zones. This holds during scroll, unlike the CSS
+        // env(safe-area-inset-*) approach, which only reflects the insets at
+        // initial layout in this WebView.
+        ViewCompat.setOnApplyWindowInsetsListener(getBridge().getWebView(), (view, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            return windowInsets;
+        });
     }
 }
