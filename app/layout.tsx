@@ -21,6 +21,9 @@ export const metadata: Metadata = {
   },
 };
 
+// Regular website visitors keep pinch-zoom (WCAG 1.4.4 requires it) — the
+// Capacitor app shell locks it client-side instead (see AppBootstrap), so
+// this stays a static export and every route keeps its static/ISR caching.
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,

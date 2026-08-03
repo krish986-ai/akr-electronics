@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { Capacitor } from '@capacitor/core';
 import { cn } from '@/lib/utils/cn';
 import { safeImageSrc } from '@/lib/utils/image';
 import { Button } from '@/components/ui/Button';
@@ -265,6 +266,35 @@ export default function CheckoutPage() {
   };
 
   const downloadQr = async () => {
+    // Android WebViews don't run an anchor-click "download" the way a real
+    // browser tab does (no download manager, no new-tab fallback) — save via
+    // the native Share sheet instead so the user can pick Photos/Files/etc.
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const res = await fetch(paySettings.qrImage);
+        const blob = await res.blob();
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+
+        const [{ Filesystem, Directory }, { Share }] = await Promise.all([
+          import('@capacitor/filesystem'),
+          import('@capacitor/share'),
+        ]);
+
+        const path = 'akr-payment-qr.png';
+        await Filesystem.writeFile({ path, data: base64Data, directory: Directory.Cache });
+        const { uri } = await Filesystem.getUri({ path, directory: Directory.Cache });
+        await Share.share({ title: 'A.K.R Electronics Payment QR', url: uri });
+      } catch {
+        // Share sheet was dismissed or the native save failed — nothing more we can do here.
+      }
+      return;
+    }
+
     try {
       const res = await fetch(paySettings.qrImage);
       const blob = await res.blob();
