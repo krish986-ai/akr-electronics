@@ -72,6 +72,11 @@ service cloud.firestore {
       }
     }
 
+    // Secondary admin action password (lib/auth/admin-password.ts). Never
+    // matched below on purpose — only the Admin SDK (which bypasses rules
+    // entirely) may touch it; no client, admin or otherwise, ever should.
+    match /adminSecrets/{id} { allow read, write: if false; }
+
     match /{document=**} {
       allow read, write: if false;
     }

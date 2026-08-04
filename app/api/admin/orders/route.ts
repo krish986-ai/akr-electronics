@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/auth/admin-guard';
-import { ADMIN_ACTION_PASSWORD } from '@/lib/auth/admin-password';
+import { getAdminActionPassword } from '@/lib/auth/admin-password';
 
 const VALID_STATUSES = [
   'PENDING',
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       .get();
 
     const orders = snapshot.docs.map(d => {
-      const { createdAt, ...data } = d.data();
+      const { createdAt: _createdAt, ...data } = d.data();
       return { id: d.id, ...data };
     });
 
@@ -113,7 +113,7 @@ export async function DELETE(request: NextRequest) {
   if (!body.id) {
     return NextResponse.json({ error: 'id is required' }, { status: 400 });
   }
-  if (body.password !== ADMIN_ACTION_PASSWORD) {
+  if (body.password !== (await getAdminActionPassword())) {
     return NextResponse.json(
       { error: 'Permanently deleting an order requires the admin action password' },
       { status: 403 }

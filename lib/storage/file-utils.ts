@@ -1,13 +1,17 @@
 import path from 'path';
+import { randomBytes } from 'crypto';
 import { UploadOptions } from './types';
 
 export const MAX_FILE_SIZE = 5 * 1024 * 1024;
+// SVG deliberately excluded: it's servable as a full HTML document
+// (app/api/images/[id]/route.ts sets Content-Type from the stored mimeType
+// with no sandboxing), so an uploaded SVG could carry a <script> payload
+// that runs same-origin if ever opened directly rather than rendered in <img>.
 export const ALLOWED_MIMES = [
   'image/jpeg',
   'image/png',
   'image/webp',
   'image/gif',
-  'image/svg+xml',
   'image/avif',
   'image/bmp',
   'image/x-icon',
@@ -29,7 +33,7 @@ export function validateFileBuffer(file: Buffer, options?: UploadOptions): void 
 
 export function generateFilename(originalName?: string): string {
   const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
+  const random = randomBytes(6).toString('hex');
   const ext = originalName ? path.extname(originalName) : '.jpg';
   return `${timestamp}-${random}${ext}`;
 }

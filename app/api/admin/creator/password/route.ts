@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyCreatorRequest } from '@/lib/auth/admin-guard';
-import { ADMIN_ACTION_PASSWORD } from '@/lib/auth/admin-password';
+import { getAdminActionPassword, setAdminActionPassword } from '@/lib/auth/admin-password';
 
 export async function PUT(request: NextRequest) {
   const check = await verifyCreatorRequest(request);
@@ -23,7 +23,7 @@ export async function PUT(request: NextRequest) {
   if (!newPassword) {
     return NextResponse.json({ error: 'New password is required' }, { status: 400 });
   }
-  if (currentPassword !== ADMIN_ACTION_PASSWORD) {
+  if (currentPassword !== (await getAdminActionPassword())) {
     return NextResponse.json({ error: 'Current password is incorrect' }, { status: 403 });
   }
   if (newPassword.length < 6) {
@@ -31,14 +31,7 @@ export async function PUT(request: NextRequest) {
   }
 
   try {
-    const fs = await import('fs').then(m => m.promises);
-    const path = await import('path');
-
-    const filePath = path.join(process.cwd(), 'lib', 'auth', 'admin-password.ts');
-    const content = `// Extra password (beyond admin login) for high-risk admin actions:\n// changing the payment QR and performing other sensitive operations.\nexport const ADMIN_ACTION_PASSWORD = '${newPassword}';\n`;
-
-    await fs.writeFile(filePath, content, 'utf-8');
-
+    await setAdminActionPassword(newPassword);
     return NextResponse.json({ ok: true, message: 'Password changed successfully' });
   } catch {
     return NextResponse.json({ error: 'Failed to update password' }, { status: 500 });

@@ -118,12 +118,17 @@ export async function POST(request: NextRequest) {
       const productRefs = order.items.map(item => db.collection('products').doc(item.productId));
       const productDocs = await Promise.all(productRefs.map(ref => tx.get(ref)));
 
+      // Prices/totals come from the client, so re-derive them from the
+      // catalog here rather than trusting what was submitted — otherwise a
+      // tampered request could check out at an arbitrary price.
+      let catalogSubtotal = 0;
       productDocs.forEach((doc, i) => {
         const item = order.items[i];
         if (!doc.exists) {
           throw new Error(`OUT_OF_STOCK:${item.name} is no longer available`);
         }
-        const stock = (doc.data()?.stock as number) ?? 0;
+        const data = doc.data() ?? {};
+        const stock = (data.stock as number) ?? 0;
         if (stock < item.quantity) {
           throw new Error(
             stock === 0
@@ -131,7 +136,23 @@ export async function POST(request: NextRequest) {
               : `OUT_OF_STOCK:Only ${stock} left of ${item.name} — reduce the quantity`
           );
         }
+        const catalogPrice = (data.price as number) ?? 0;
+        if (Math.abs(catalogPrice - item.price) > 0.01) {
+          throw new Error(`PRICE_MISMATCH:${item.name}'s price has changed — please refresh your cart`);
+        }
+        catalogSubtotal += catalogPrice * item.quantity;
       });
+
+      if (Math.abs(catalogSubtotal - order.subtotal) > 1) {
+        throw new Error('PRICE_MISMATCH:Your cart is out of date — please refresh and try again');
+      }
+      if (order.discount < 0 || order.discount > catalogSubtotal) {
+        throw new Error('PRICE_MISMATCH:Invalid discount amount');
+      }
+      const expectedTotal = catalogSubtotal + order.shipping + order.lowOrderCharge - order.discount;
+      if (Math.abs(expectedTotal - order.total) > 1) {
+        throw new Error('PRICE_MISMATCH:Your cart is out of date — please refresh and try again');
+      }
 
       productDocs.forEach((doc, i) => {
         const stock = (doc.data()?.stock as number) ?? 0;
@@ -154,6 +175,9 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : '';
     if (message.startsWith('OUT_OF_STOCK:')) {
       return NextResponse.json({ error: message.slice('OUT_OF_STOCK:'.length) }, { status: 409 });
+    }
+    if (message.startsWith('PRICE_MISMATCH:')) {
+      return NextResponse.json({ error: message.slice('PRICE_MISMATCH:'.length) }, { status: 409 });
     }
     return NextResponse.json({ error: 'Failed to place order' }, { status: 500 });
   }
