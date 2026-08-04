@@ -4,6 +4,7 @@ import { ServiceWorkerRegistration } from '@/components/ServiceWorkerRegistratio
 import { AppBootstrap } from '@/components/native/AppBootstrap';
 import { OfflineBanner } from '@/components/native/OfflineBanner';
 import { PushNotifications } from '@/components/native/PushNotifications';
+import { AccountSync } from '@/components/native/AccountSync';
 
 export const metadata: Metadata = {
   title: 'A.K.R Electronics - Premium IoT Solutions',
@@ -43,6 +44,7 @@ export default function RootLayout({
         <AppBootstrap />
         <OfflineBanner />
         <PushNotifications />
+        <AccountSync />
         {children}
       </body>
     </html>
