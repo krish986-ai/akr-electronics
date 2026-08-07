@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { adminFetch, adminMutate } from '@/lib/api/admin-client';
 import { OrderSettingsPanel } from '@/components/admin/OrderSettingsPanel';
 import { ImageUploadField } from '@/components/admin/ImageUploadField';
+import { PaymentsPasswordGate } from '@/components/admin/PaymentsPasswordGate';
 import { PaymentSettings, defaultPaymentSettings } from '@/lib/payments/settings';
 import { PlacedOrder } from '@/lib/stores/orders';
 
@@ -20,22 +21,24 @@ export default function AdminPaymentsPage() {
   const [error, setError] = useState('');
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-neutral-900">Payments</h1>
-        <p className="text-sm text-neutral-500">
-          Control every payment method, verify QR payments, and tune delivery charges
-        </p>
+    <PaymentsPasswordGate>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-neutral-900">Payments</h1>
+          <p className="text-sm text-neutral-500">
+            Control every payment method, verify QR payments, and tune delivery charges
+          </p>
+        </div>
+
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+        )}
+
+        <PendingQrPanel onError={setError} />
+        <PaymentMethodsPanel onError={setError} />
+        <OrderSettingsPanel onError={setError} />
       </div>
-
-      {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
-      )}
-
-      <PendingQrPanel onError={setError} />
-      <PaymentMethodsPanel onError={setError} />
-      <OrderSettingsPanel onError={setError} />
-    </div>
+    </PaymentsPasswordGate>
   );
 }
 
