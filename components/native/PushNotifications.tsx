@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { Capacitor } from '@capacitor/core';
 import type { PluginListenerHandle } from '@capacitor/core';
 import { useAuth } from '@/lib/auth/client';
+import { auth } from '@/lib/firebase/config';
 
 export function PushNotifications() {
   const { user, isAuthenticated } = useAuth();
@@ -29,10 +30,12 @@ export function PushNotifications() {
         (await Push.requestPermissions()).receive === 'granted';
       if (!granted || cancelled) return;
 
-      registrationListener = await Push.addListener('registration', token => {
+      registrationListener = await Push.addListener('registration', async token => {
+        const idToken = await auth?.currentUser?.getIdToken().catch(() => null);
+        if (!idToken) return;
         fetch('/api/notifications/register-token', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-user-id': user.id },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
           body: JSON.stringify({ token: token.value, platform: 'android' }),
         }).catch(() => {});
       });

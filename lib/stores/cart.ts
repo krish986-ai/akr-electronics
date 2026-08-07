@@ -18,6 +18,10 @@ interface CartState {
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  // Wholesale replace used by CartSync to hydrate from / react to the
+  // signed-in account's Firestore cart — bypasses the merge-by-productId
+  // logic in addItem since the caller already has the final item list.
+  replaceItems: (items: CartLine[]) => void;
 }
 
 export const useCartStore = create<CartState>()(
@@ -69,6 +73,8 @@ export const useCartStore = create<CartState>()(
         })),
 
       clearCart: () => set({ items: [] }),
+
+      replaceItems: items => set({ items }),
     }),
     { name: 'akr-cart' }
   )

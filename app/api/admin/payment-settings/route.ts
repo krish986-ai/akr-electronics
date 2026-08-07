@@ -5,7 +5,7 @@ import { verifyAdminRequest } from '@/lib/auth/admin-guard';
 import { defaultPaymentSettings } from '@/lib/payments/settings';
 import { imageUrlSchema } from '@/lib/validation/image-validation';
 import { deleteHostedImage } from '@/lib/storage/cleanup';
-import { ADMIN_ACTION_PASSWORD } from '@/lib/auth/admin-password';
+import { getAdminActionPassword } from '@/lib/auth/admin-password';
 
 const paymentSettingsSchema = z.object({
   razorpayEnabled: z.boolean(),
@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest) {
     const oldImage = (existing.data()?.qrImage as string) ?? '';
 
     if (settings.qrImage !== oldImage) {
-      if (qrPassword !== ADMIN_ACTION_PASSWORD) {
+      if (qrPassword !== (await getAdminActionPassword())) {
         return NextResponse.json(
           { error: 'Changing the payment QR requires the QR change password' },
           { status: 403 }
