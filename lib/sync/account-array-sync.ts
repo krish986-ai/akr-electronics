@@ -2,7 +2,8 @@
 
 export interface ArraySyncAdapter<T> {
   getLocal: () => T[];
-  replaceLocal: (items: T[]) => void;
+  getLocalOwner: () => string | null;
+  replaceLocal: (items: T[], ownerUid?: string | null) => void;
   clearLocal: () => void;
   fetchRemote: (uid: string) => Promise<T[] | null>;
   saveRemote: (uid: string, items: T[]) => Promise<void>;
@@ -25,18 +26,25 @@ export async function syncOnSignIn<T>(
   adapter: ArraySyncAdapter<T>,
   withRemoteApplied: (apply: () => void) => void
 ): Promise<() => void> {
-  const localItems = adapter.getLocal();
+  // Local data left behind by a *different* account on this device (sign-out
+  // clear didn't run — tab closed, crash, etc.) must never merge into this
+  // sign-in. Only data with no owner (guest additions) or already owned by
+  // this same uid is safe to fold in.
+  const localOwner = adapter.getLocalOwner();
+  const localItems = localOwner === null || localOwner === uid ? adapter.getLocal() : [];
   const remoteItems = (await adapter.fetchRemote(uid).catch(() => null)) ?? [];
   const merged = adapter.merge(localItems, remoteItems);
 
-  withRemoteApplied(() => adapter.replaceLocal(merged));
+  withRemoteApplied(() => adapter.replaceLocal(merged, uid));
 
   if (merged.length > 0) {
-    await adapter.saveRemote(uid, merged).catch(() => {});
+    await adapter.saveRemote(uid, merged).catch(err => {
+      console.error('syncOnSignIn: failed to persist merged data', err);
+    });
   }
 
   const unsubscribe = adapter.subscribeRemote(uid, items => {
-    withRemoteApplied(() => adapter.replaceLocal(items));
+    withRemoteApplied(() => adapter.replaceLocal(items, uid));
   });
 
   return () => unsubscribe?.();

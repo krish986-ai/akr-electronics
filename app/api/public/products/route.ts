@@ -3,12 +3,14 @@ import { queryServerProducts } from '@/lib/data/server-catalog';
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
+  const minPrice = params.get('minPrice');
   const maxPrice = params.get('maxPrice');
 
   const result = await queryServerProducts({
     search: params.get('search') ?? undefined,
     category: params.get('category') ?? undefined,
     brand: params.get('brand') ?? undefined,
+    minPrice: minPrice ? Number(minPrice) : undefined,
     maxPrice: maxPrice ? Number(maxPrice) : undefined,
     sort: params.get('sort') ?? undefined,
     page: Number(params.get('page') ?? '1') || 1,

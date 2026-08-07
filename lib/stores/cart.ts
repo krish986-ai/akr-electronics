@@ -14,6 +14,13 @@ export interface CartLine {
 
 interface CartState {
   items: CartLine[];
+  // Account this cart currently belongs to: null means "unclaimed" (guest
+  // additions, or freshly cleared on sign-out) and is safe to merge into
+  // whichever account signs in next. Set to a uid once that account's cart
+  // has been hydrated, so a device that goes A signs out -> B signs in never
+  // merges A's leftovers into B, even if the sign-out clear didn't get a
+  // chance to run (tab closed, crash, etc). See AccountSync.
+  ownerUid: string | null;
   addItem: (product: Product, quantity: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -21,13 +28,14 @@ interface CartState {
   // Wholesale replace used by CartSync to hydrate from / react to the
   // signed-in account's Firestore cart — bypasses the merge-by-productId
   // logic in addItem since the caller already has the final item list.
-  replaceItems: (items: CartLine[]) => void;
+  replaceItems: (items: CartLine[], ownerUid?: string | null) => void;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
     set => ({
       items: [],
+      ownerUid: null,
 
       addItem: (product, quantity) =>
         set(state => {
@@ -72,9 +80,9 @@ export const useCartStore = create<CartState>()(
                 ),
         })),
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => set({ items: [], ownerUid: null }),
 
-      replaceItems: items => set({ items }),
+      replaceItems: (items, ownerUid) => set({ items, ownerUid: ownerUid ?? null }),
     }),
     { name: 'akr-cart' }
   )

@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAdminDb } from '@/lib/firebase/admin';
 import { verifyUserRequest } from '@/lib/auth/user-guard';
+import { isCreatorEmail } from '@/lib/auth/creator';
 import { revalidateTag } from 'next/cache';
-import { CATALOG_TAG } from '@/lib/data/server-catalog';
+import { CATALOG_TAG, getServerConfig } from '@/lib/data/server-catalog';
+import { sendEmail } from '@/lib/email/resend';
+import { buildInvoiceEmail } from '@/lib/email/invoice';
 
 const orderItemSchema = z.object({
   productId: z.string().min(1),
@@ -46,6 +49,15 @@ export async function POST(request: NextRequest) {
   const check = await verifyUserRequest(request);
   if (!check.ok) {
     return NextResponse.json({ error: check.error }, { status: check.status });
+  }
+  // The creator account (lib/auth/creator.ts) uses a placeholder address
+  // that can never actually receive a verification email — same bypass
+  // already applied to the Payments section gate.
+  if (!check.emailVerified && !isCreatorEmail(check.email)) {
+    return NextResponse.json(
+      { error: 'Please verify your email address before placing an order' },
+      { status: 403 }
+    );
   }
 
   let order: z.infer<typeof placeOrderSchema>;
@@ -169,6 +181,17 @@ export async function POST(request: NextRequest) {
 
     // Stock changed — refresh the cached catalog so storefront counts stay honest.
     revalidateTag(CATALOG_TAG, 'max');
+
+    // Best-effort — a delivery hiccup (or RESEND_API_KEY not configured yet,
+    // per .env.example) must never fail an order that's already been placed
+    // and paid for.
+    try {
+      const store = await getServerConfig();
+      const { subject, html, text } = buildInvoiceEmail(order, store);
+      await sendEmail({ to: order.address.email, subject, html, text });
+    } catch (err) {
+      console.error('Failed to send order invoice email', err);
+    }
 
     return NextResponse.json({ ok: true, orderNumber: order.orderNumber }, { status: 201 });
   } catch (error) {

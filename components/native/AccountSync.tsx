@@ -22,6 +22,16 @@ import { syncOnSignIn, type ArraySyncAdapter } from '@/lib/sync/account-array-sy
 export function AccountSync() {
   const applyingCartRemote = useRef(false);
   const applyingWishlistRemote = useRef(false);
+  // Latest in-flight write-through save, so a sign-out that lands right
+  // after an add-to-cart/wishlist edit can wait for it instead of clearing
+  // local state out from under a save that hasn't reached Firestore yet.
+  const cartSaveInFlight = useRef<Promise<unknown>>(Promise.resolve());
+  const wishlistSaveInFlight = useRef<Promise<unknown>>(Promise.resolve());
+  // undefined = no auth callback seen yet. Only a real signed-in -> null
+  // transition means "this account logged out"; the very first callback
+  // reporting null just means the visitor is (and always was) a guest, and
+  // their guest cart/wishlist must be left alone.
+  const previousUid = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
     if (!isFirebaseConfigured || !auth) return;
@@ -31,7 +41,8 @@ export function AccountSync() {
 
     const cartAdapter: ArraySyncAdapter<CartLine> = {
       getLocal: () => useCartStore.getState().items,
-      replaceLocal: items => useCartStore.getState().replaceItems(items),
+      getLocalOwner: () => useCartStore.getState().ownerUid,
+      replaceLocal: (items, ownerUid) => useCartStore.getState().replaceItems(items, ownerUid),
       clearLocal: () => useCartStore.getState().clearCart(),
       fetchRemote: fetchRemoteCart,
       saveRemote: saveRemoteCart,
@@ -41,7 +52,8 @@ export function AccountSync() {
 
     const wishlistAdapter: ArraySyncAdapter<string> = {
       getLocal: () => useWishlistStore.getState().productIds,
-      replaceLocal: ids => useWishlistStore.getState().replaceIds(ids),
+      getLocalOwner: () => useWishlistStore.getState().ownerUid,
+      replaceLocal: (ids, ownerUid) => useWishlistStore.getState().replaceIds(ids, ownerUid),
       clearLocal: () => useWishlistStore.getState().clear(),
       fetchRemote: fetchRemoteWishlist,
       saveRemote: saveRemoteWishlist,
@@ -55,11 +67,20 @@ export function AccountSync() {
       disposeWishlist?.();
       disposeWishlist = null;
 
+      const wasSignedIn = previousUid.current !== undefined && previousUid.current !== null;
+      previousUid.current = user?.uid ?? null;
+
       if (!user) {
-        // Prevents the next signed-out/guest session on a shared device from
-        // inheriting — and re-merging into a different account — this one's data.
-        cartAdapter.clearLocal();
-        wishlistAdapter.clearLocal();
+        if (wasSignedIn) {
+          // Real sign-out: let any save still in flight land before wiping
+          // local state, then clear so the next guest/account on this
+          // device can't inherit or re-merge this one's data.
+          await Promise.allSettled([cartSaveInFlight.current, wishlistSaveInFlight.current]);
+          cartAdapter.clearLocal();
+          wishlistAdapter.clearLocal();
+        }
+        // First callback reporting no user (plain guest session): nothing
+        // to clear, whatever's local is the guest's own cart/wishlist.
         return;
       }
 
@@ -89,7 +110,9 @@ export function AccountSync() {
       if (applyingCartRemote.current) return;
       const user = auth?.currentUser;
       if (!user) return;
-      saveRemoteCart(user.uid, state.items).catch(() => {});
+      cartSaveInFlight.current = saveRemoteCart(user.uid, state.items).catch(err => {
+        console.error('Failed to sync cart to account', err);
+      });
     });
   }, []);
 
@@ -99,7 +122,9 @@ export function AccountSync() {
       if (applyingWishlistRemote.current) return;
       const user = auth?.currentUser;
       if (!user) return;
-      saveRemoteWishlist(user.uid, state.productIds).catch(() => {});
+      wishlistSaveInFlight.current = saveRemoteWishlist(user.uid, state.productIds).catch(err => {
+        console.error('Failed to sync wishlist to account', err);
+      });
     });
   }, []);
 

@@ -56,7 +56,9 @@ function ProductsPageInner() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedBrand, setSelectedBrand] = useState('');
+  const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(MAX_PRICE);
+  const [debouncedMinPrice, setDebouncedMinPrice] = useState(0);
   const [debouncedMaxPrice, setDebouncedMaxPrice] = useState(MAX_PRICE);
   const [sortBy, setSortBy] = useState('popular');
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,10 +88,11 @@ function ProductsPageInner() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
+      setDebouncedMinPrice(minPrice);
       setDebouncedMaxPrice(maxPrice);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, maxPrice]);
+  }, [searchQuery, minPrice, maxPrice]);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,6 +100,7 @@ function ProductsPageInner() {
       search: debouncedSearch || undefined,
       category: selectedCategory || undefined,
       brand: selectedBrand || undefined,
+      minPrice: debouncedMinPrice > 0 ? debouncedMinPrice : undefined,
       maxPrice: debouncedMaxPrice < MAX_PRICE ? debouncedMaxPrice : undefined,
       sort: sortBy,
       page: currentPage,
@@ -112,20 +116,21 @@ function ProductsPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedSearch, selectedCategory, selectedBrand, debouncedMaxPrice, sortBy, currentPage]);
+  }, [debouncedSearch, selectedCategory, selectedBrand, debouncedMinPrice, debouncedMaxPrice, sortBy, currentPage]);
 
   const totalPages = Math.max(1, Math.ceil(total / ITEMS_PER_PAGE));
   const activeFilterCount = [
     selectedCategory,
     selectedBrand,
     searchQuery,
-    maxPrice < MAX_PRICE,
+    minPrice > 0 || maxPrice < MAX_PRICE,
   ].filter(Boolean).length;
 
   const resetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('');
     setSelectedBrand('');
+    setMinPrice(0);
     setMaxPrice(MAX_PRICE);
     setSortBy('popular');
     setCurrentPage(1);
@@ -190,8 +195,9 @@ function ProductsPageInner() {
             brandsList={brandsList}
             selectedBrand={selectedBrand}
             onSelectBrand={v => { setSelectedBrand(v); setCurrentPage(1); }}
+            minPrice={minPrice}
             maxPrice={maxPrice}
-            onMaxPriceChange={v => { setMaxPrice(v); setCurrentPage(1); }}
+            onPriceChange={(lo, hi) => { setMinPrice(lo); setMaxPrice(hi); setCurrentPage(1); }}
             onReset={resetFilters}
           />
         </aside>
@@ -329,8 +335,9 @@ function ProductsPageInner() {
             brandsList={brandsList}
             selectedBrand={selectedBrand}
             onSelectBrand={v => { setSelectedBrand(v); setCurrentPage(1); }}
+            minPrice={minPrice}
             maxPrice={maxPrice}
-            onMaxPriceChange={v => { setMaxPrice(v); setCurrentPage(1); }}
+            onPriceChange={(lo, hi) => { setMinPrice(lo); setMaxPrice(hi); setCurrentPage(1); }}
             onReset={resetFilters}
           />
         </div>
@@ -363,8 +370,9 @@ function FiltersPanel({
   brandsList,
   selectedBrand,
   onSelectBrand,
+  minPrice,
   maxPrice,
-  onMaxPriceChange,
+  onPriceChange,
   onReset,
 }: {
   searchQuery: string;
@@ -376,8 +384,9 @@ function FiltersPanel({
   brandsList: { id: string; name: string; slug: string }[];
   selectedBrand: string;
   onSelectBrand: (v: string) => void;
+  minPrice: number;
   maxPrice: number;
-  onMaxPriceChange: (v: number) => void;
+  onPriceChange: (min: number, max: number) => void;
   onReset: () => void;
 }) {
   return (
@@ -436,17 +445,12 @@ function FiltersPanel({
       </div>
 
       <div>
-        <h3 className="font-semibold text-neutral-900 text-sm mb-3">Max Price</h3>
-        <input
-          type="range"
-          min={100}
-          max={MAX_PRICE}
-          step={100}
-          value={maxPrice}
-          onChange={e => onMaxPriceChange(Number(e.target.value))}
-          className="w-full accent-primary-600"
-        />
-        <p className="text-xs text-neutral-500 mt-1">Up to ₹{maxPrice.toLocaleString('en-IN')}</p>
+        <h3 className="font-semibold text-neutral-900 text-sm mb-3">Price Range</h3>
+        <PriceRangeSlider min={0} max={MAX_PRICE} valueMin={minPrice} valueMax={maxPrice} onChange={onPriceChange} />
+        <p className="text-xs text-neutral-500 mt-1">
+          ₹{minPrice.toLocaleString('en-IN')} – ₹{maxPrice.toLocaleString('en-IN')}
+          {maxPrice >= MAX_PRICE && '+'}
+        </p>
       </div>
 
       <button
@@ -455,6 +459,77 @@ function FiltersPanel({
       >
         Reset Filters
       </button>
+    </div>
+  );
+}
+
+// Two overlapping native range inputs sharing one track — plain HTML/CSS,
+// no slider library. A gap is enforced between the handles (STEP) so
+// they can never cross and invert min/max. Whichever handle sits past the
+// midpoint gets the higher z-index, so a handle dragged to the far side
+// of its sibling stays grabbable instead of getting stuck underneath it.
+const PRICE_STEP = 100;
+const THUMB_CLASSES =
+  '[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none ' +
+  '[&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full ' +
+  '[&::-webkit-slider-thumb]:bg-primary-600 [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white ' +
+  '[&::-webkit-slider-thumb]:shadow [&::-webkit-slider-thumb]:cursor-pointer ' +
+  '[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 ' +
+  '[&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-primary-600 [&::-moz-range-thumb]:border-2 ' +
+  '[&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow [&::-moz-range-thumb]:cursor-pointer';
+
+function PriceRangeSlider({
+  min,
+  max,
+  valueMin,
+  valueMax,
+  onChange,
+}: {
+  min: number;
+  max: number;
+  valueMin: number;
+  valueMax: number;
+  onChange: (min: number, max: number) => void;
+}) {
+  const pctMin = ((valueMin - min) / (max - min)) * 100;
+  const pctMax = ((valueMax - min) / (max - min)) * 100;
+  const minOnTop = pctMin > 50;
+
+  return (
+    <div className="relative h-4 flex items-center">
+      <div className="absolute w-full h-1.5 rounded-full bg-neutral-200" />
+      <div
+        className="absolute h-1.5 rounded-full bg-primary-600"
+        style={{ left: `${pctMin}%`, right: `${100 - pctMax}%` }}
+      />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={PRICE_STEP}
+        value={valueMin}
+        onChange={e => onChange(Math.min(Number(e.target.value), valueMax - PRICE_STEP), valueMax)}
+        aria-label="Minimum price"
+        style={{ zIndex: minOnTop ? 4 : 3 }}
+        className={cn(
+          'absolute w-full h-1.5 appearance-none bg-transparent pointer-events-none',
+          THUMB_CLASSES
+        )}
+      />
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={PRICE_STEP}
+        value={valueMax}
+        onChange={e => onChange(valueMin, Math.max(Number(e.target.value), valueMin + PRICE_STEP))}
+        aria-label="Maximum price"
+        style={{ zIndex: minOnTop ? 3 : 4 }}
+        className={cn(
+          'absolute w-full h-1.5 appearance-none bg-transparent pointer-events-none',
+          THUMB_CLASSES
+        )}
+      />
     </div>
   );
 }

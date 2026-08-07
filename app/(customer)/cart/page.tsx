@@ -28,7 +28,7 @@ export default function CartPage() {
         <h1 className="text-2xl font-bold text-neutral-900 mb-2">Your cart is empty</h1>
         <p className="text-sm text-neutral-500 mb-6">Add some components and start building.</p>
         <Link
-          href="/products"
+          href="/"
           className="inline-block bg-primary-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-primary-700"
         >
           Continue Shopping

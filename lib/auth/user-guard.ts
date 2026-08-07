@@ -5,6 +5,7 @@ export interface UserCheck {
   ok: boolean;
   uid?: string;
   email?: string;
+  emailVerified?: boolean;
   error?: string;
   status?: number;
 }
@@ -18,7 +19,7 @@ export async function verifyUserRequest(request: NextRequest): Promise<UserCheck
 
   try {
     const decoded = await getAdminAuth().verifyIdToken(token);
-    return { ok: true, uid: decoded.uid, email: decoded.email };
+    return { ok: true, uid: decoded.uid, email: decoded.email, emailVerified: decoded.email_verified === true };
   } catch {
     return { ok: false, error: 'Invalid or expired token', status: 401 };
   }

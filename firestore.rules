@@ -11,6 +11,18 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    // Keep this literal in sync with CREATOR_EMAIL in lib/auth/creator.ts —
+    // rules run in a separate runtime and can't import that constant. The
+    // creator's placeholder address can never receive a real verification
+    // email, so it's exempted here the same way it's exempted in code.
+    function isCreator() {
+      return isSignedIn() && request.auth.token.email == 'smart@gmail.com';
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || isCreator());
+    }
+
     function isAdmin() {
       return isSignedIn() &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'ADMIN';
@@ -29,12 +41,12 @@ service cloud.firestore {
     // create; only admins moderate/delete
     match /reviews/{id} {
       allow read: if true;
-      allow create: if isSignedIn();
+      allow create: if isVerified();
       allow update, delete: if isAdmin();
     }
     match /questions/{id} {
       allow read: if true;
-      allow create: if isSignedIn();
+      allow create: if isVerified();
       allow update, delete: if isAdmin();
     }
 

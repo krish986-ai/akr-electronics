@@ -162,6 +162,7 @@ export interface CatalogQuery {
   search?: string;
   category?: string;
   brand?: string;
+  minPrice?: number;
   maxPrice?: number;
   sort?: string;
   page?: number;
@@ -312,11 +313,13 @@ export async function queryServerProducts(queryInput: CatalogQuery): Promise<Cat
   const search = queryInput.search?.trim().toLowerCase() ?? '';
   const category = queryInput.category ? resolveCategorySlug(queryInput.category, categories) : '';
   const brand = queryInput.brand ?? '';
+  const minPrice = queryInput.minPrice;
   const maxPrice = queryInput.maxPrice;
 
   const matchesCategory = (p: Product) => !category || p.categorySlug === category;
   const matchesBrand = (p: Product) => !brand || p.brandSlug === brand;
-  const matchesPrice = (p: Product) => maxPrice === undefined || p.price <= maxPrice;
+  const matchesPrice = (p: Product) =>
+    (minPrice === undefined || p.price >= minPrice) && (maxPrice === undefined || p.price <= maxPrice);
   const matchesFilters = (p: Product) => matchesCategory(p) && matchesBrand(p) && matchesPrice(p);
 
   let filtered = products.filter(matchesFilters);

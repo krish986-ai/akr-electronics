@@ -299,7 +299,12 @@ export default function ProfilePage() {
       <CardContent>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2 text-neutral-900">Current Password</label>
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-sm font-medium text-neutral-900">Current Password</label>
+              <Link href="/auth/forgot-password" className="text-xs text-primary-600 hover:text-primary-700">
+                Forgot it?
+              </Link>
+            </div>
             <Input
               type="password"
               value={newPassword.current}

@@ -79,7 +79,10 @@ export default function WishlistPage() {
                 </p>
                 <div className="flex gap-2 mt-3">
                   <button
-                    onClick={() => addToCart(product, 1)}
+                    onClick={() => {
+                      addToCart(product, 1);
+                      remove(product.id);
+                    }}
                     disabled={product.stock === 0}
                     className="flex-1 h-9 rounded-lg bg-primary-600 text-white text-xs font-semibold hover:bg-primary-700 disabled:opacity-50"
                   >

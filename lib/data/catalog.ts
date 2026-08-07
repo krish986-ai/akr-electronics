@@ -37,6 +37,7 @@ export type CatalogPageParams = {
   search?: string;
   category?: string;
   brand?: string;
+  minPrice?: number;
   maxPrice?: number;
   sort?: string;
   page?: number;
@@ -108,6 +109,7 @@ export async function getCatalogPage(params: CatalogPageParams): Promise<Catalog
   if (params.search) query.set('search', params.search);
   if (params.category) query.set('category', params.category);
   if (params.brand) query.set('brand', params.brand);
+  if (params.minPrice !== undefined) query.set('minPrice', String(params.minPrice));
   if (params.maxPrice !== undefined) query.set('maxPrice', String(params.maxPrice));
   if (params.sort) query.set('sort', params.sort);
   if (params.page) query.set('page', String(params.page));

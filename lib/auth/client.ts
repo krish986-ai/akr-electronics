@@ -9,6 +9,8 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  sendEmailVerification,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { auth, isFirebaseConfigured } from '@/lib/firebase/config';
@@ -84,6 +86,11 @@ export function useAuth() {
         const credential = await createUserWithEmailAndPassword(auth, profile.email, password);
         await updateProfile(credential.user, { displayName: profile.name });
         await createUserProfile(credential.user.uid, profile);
+        // Best-effort — a delivery hiccup here shouldn't block account creation;
+        // the "verify your email" banner + resend button covers this case.
+        await sendEmailVerification(credential.user).catch(err => {
+          console.error('Failed to send verification email', err);
+        });
         const authUser = { ...firebaseUserToAuthUser(credential.user), name: profile.name };
         setUser(authUser);
         return authUser;
@@ -116,6 +123,33 @@ export function useAuth() {
     setUser(null);
   }, []);
 
+  const sendPasswordReset = useCallback(async (email: string): Promise<void> => {
+    if (!isFirebaseConfigured || !auth) {
+      throw new Error('Password reset requires Firebase configuration');
+    }
+    await sendPasswordResetEmail(auth, email);
+  }, []);
+
+  const resendVerificationEmail = useCallback(async (): Promise<void> => {
+    if (!isFirebaseConfigured || !auth?.currentUser) {
+      throw new Error('You need to be signed in to resend a verification email');
+    }
+    await sendEmailVerification(auth.currentUser);
+  }, []);
+
+  // Firebase only learns a link was clicked once the ID token is refreshed
+  // — onAuthStateChanged doesn't refire for that on its own. Call this after
+  // asking the user to check whether they've verified.
+  const refreshEmailVerified = useCallback(async (): Promise<boolean> => {
+    if (!isFirebaseConfigured || !auth?.currentUser) return false;
+    await auth.currentUser.reload();
+    const verified = auth.currentUser.emailVerified;
+    if (verified) {
+      setUser(firebaseUserToAuthUser(auth.currentUser));
+    }
+    return verified;
+  }, []);
+
   return {
     user,
     isLoading,
@@ -124,6 +158,9 @@ export function useAuth() {
     registerUser,
     loginWithGoogle,
     logout,
+    sendPasswordReset,
+    resendVerificationEmail,
+    refreshEmailVerified,
   };
 }
 
