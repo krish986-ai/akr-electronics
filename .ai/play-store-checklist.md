@@ -71,13 +71,17 @@ not a repo).
      checkout)
 6. **Privacy Policy URL** for the listing form:
    `https://akr-electronics.vercel.app/privacy-policy` (already live).
-7. **Build the release bundle** — Play Store requires an `.aab` (Android
-   App Bundle), not a raw `.apk`. From `android/`:
-   `./gradlew bundleRelease` → output at
-   `android/app/build/outputs/bundle/release/app-release.aab`.
-   (There's an `app-release.apk` already sitting in
-   `android/app/build/outputs/apk/release/` from an earlier build — fine for
-   sideloading/testing, but Play Store won't accept it for a new listing.)
+7. ~~Build the release bundle~~ — **done**. Built and verified on a physical
+   device (adb install + launch):
+   `android/app/build/outputs/bundle/release/AKR-Electronics-release.aab`
+   (upload this to Play Console) and
+   `android/app/build/outputs/apk/release/AKR-Electronics-release.apk`
+   (for sideloading/testing only). Rebuild with
+   `./gradlew bundleRelease assembleRelease` from `android/` — needs
+   `JAVA_HOME` pointed at a JDK 17–21 (this machine's Android Studio JBR was
+   incomplete; used Microsoft OpenJDK 21 installed via winget instead).
+   Bump `versionCode`/`versionName` in `android/app/build.gradle` before any
+   *rebuild after this first submission*.
 8. **Category & audience** — "Shopping" category; confirm target audience
    excludes children (keeps you out of the stricter Families policy).
 9. **Support contact** — Play Console requires a support email. Decide if
