@@ -41,6 +41,12 @@ android {
     }
 }
 
+// Renames the built .apk/.aab from the generic "app-release" to something
+// recognizable when shared or uploaded to Play Console.
+base {
+    archivesName = "AKR-Electronics"
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
