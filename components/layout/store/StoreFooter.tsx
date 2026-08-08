@@ -45,6 +45,8 @@ const DEFAULT_PHONE = '1800 123 4567';
 export function StoreFooter({ phone = DEFAULT_PHONE }: { phone?: string }) {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subscribeError, setSubscribeError] = useState('');
 
   return (
     <footer className="bg-neutral-900 text-neutral-300 mt-16">
@@ -55,30 +57,52 @@ export function StoreFooter({ phone = DEFAULT_PHONE }: { phone?: string }) {
             <p className="text-sm text-neutral-400">Project ideas, new launches and maker offers — no spam.</p>
           </div>
           {subscribed ? (
-            <p className="text-sm text-emerald-400 font-medium">✓ Subscribed! Welcome to the maker family.</p>
+            <p className="text-sm text-emerald-400 font-medium">✓ Subscribed! Welcome to the AKR family.</p>
           ) : (
-            <form
-              className="flex gap-2 w-full md:w-auto"
-              onSubmit={e => {
-                e.preventDefault();
-                if (/.+@.+\..+/.test(email)) setSubscribed(true);
-              }}
-            >
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Your email address"
-                className="flex-1 md:w-72 h-10 rounded-lg bg-neutral-800 border border-neutral-700 px-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-              <button
-                type="submit"
-                className="h-10 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors"
+            <div className="w-full md:w-auto">
+              <form
+                className="flex gap-2 w-full md:w-auto"
+                onSubmit={async e => {
+                  e.preventDefault();
+                  if (!/.+@.+\..+/.test(email) || subscribing) return;
+                  setSubscribing(true);
+                  setSubscribeError('');
+                  try {
+                    const res = await fetch('/api/newsletter/subscribe', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ email }),
+                    });
+                    if (!res.ok) {
+                      const data = await res.json().catch(() => ({}));
+                      throw new Error(data.error ?? 'Could not subscribe right now');
+                    }
+                    setSubscribed(true);
+                  } catch (err) {
+                    setSubscribeError(err instanceof Error ? err.message : 'Could not subscribe right now');
+                  } finally {
+                    setSubscribing(false);
+                  }
+                }}
               >
-                Subscribe
-              </button>
-            </form>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder="Your email address"
+                  className="flex-1 md:w-72 h-10 rounded-lg bg-neutral-800 border border-neutral-700 px-3 text-sm text-white placeholder:text-neutral-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <button
+                  type="submit"
+                  disabled={subscribing}
+                  className="h-10 px-4 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-60"
+                >
+                  {subscribing ? 'Subscribing…' : 'Subscribe'}
+                </button>
+              </form>
+              {subscribeError && <p className="text-xs text-red-400 mt-1">{subscribeError}</p>}
+            </div>
           )}
         </div>
       </div>

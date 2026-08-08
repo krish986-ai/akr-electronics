@@ -40,6 +40,7 @@ export interface PlacedOrder {
   shipping: number;
   lowOrderCharge: number;
   discount: number;
+  couponCode?: string;
   total: number;
   address: ShippingAddress;
   qrPayerName?: string;

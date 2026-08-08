@@ -13,7 +13,8 @@ import { RadioGroup } from '@/components/ui/Radio';
 import { useCartStore, cartSubtotal } from '@/lib/stores/cart';
 import { useBuyNowStore } from '@/lib/stores/buy-now';
 import { nextOrderNumber, PlacedOrder } from '@/lib/stores/orders';
-import { coupons, Coupon } from '@/lib/mock/products';
+import { Coupon } from '@/lib/mock/products';
+import { getCoupons } from '@/lib/data/catalog';
 import { useAuth } from '@/lib/auth/client';
 import { fetchUserProfile } from '@/lib/auth/profile';
 import { submitOrder } from '@/lib/orders/service';
@@ -95,6 +96,11 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([]);
+
+  useEffect(() => {
+    getCoupons().then(setAvailableCoupons);
+  }, []);
   const [placedOrderId, setPlacedOrderId] = useState('');
   const [placedPendingQr, setPlacedPendingQr] = useState(false);
   const [qrPayerName, setQrPayerName] = useState('');
@@ -124,7 +130,7 @@ export default function CheckoutPage() {
   const total = Math.max(0, subtotal + shippingCost + lowOrderCharge - discount);
 
   const handleApplyCoupon = () => {
-    const found = coupons.find(c => c.code === coupon.trim().toUpperCase() && c.active);
+    const found = availableCoupons.find(c => c.code === coupon.trim().toUpperCase() && c.active);
     if (!found) {
       setCouponError('Invalid or expired coupon code');
       return;
@@ -172,6 +178,7 @@ export default function CheckoutPage() {
         shipping: shippingCost,
         lowOrderCharge,
         discount,
+        couponCode: appliedCoupon?.code,
         total,
         address: shippingAddress,
         ...extras,

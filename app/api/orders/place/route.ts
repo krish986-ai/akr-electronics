@@ -33,6 +33,7 @@ const placeOrderSchema = z.object({
   shipping: z.number().min(0),
   lowOrderCharge: z.number().min(0),
   discount: z.number().min(0),
+  couponCode: z.string().max(20).optional(),
   total: z.number().min(0),
   address: z.object({
     name: z.string().min(1),
@@ -158,9 +159,37 @@ export async function POST(request: NextRequest) {
       if (Math.abs(catalogSubtotal - order.subtotal) > 1) {
         throw new Error('PRICE_MISMATCH:Your cart is out of date — please refresh and try again');
       }
-      if (order.discount < 0 || order.discount > catalogSubtotal) {
-        throw new Error('PRICE_MISMATCH:Invalid discount amount');
+
+      // The discount amount comes from the client too, so re-derive it from
+      // the coupon stored in Firestore rather than trusting it — otherwise a
+      // disabled/expired coupon (or no coupon at all) could still discount
+      // an order.
+      let expectedDiscount = 0;
+      if (order.discount > 0) {
+        if (!order.couponCode) {
+          throw new Error('COUPON_INVALID:This coupon is no longer valid');
+        }
+        const couponDoc = await tx.get(db.collection('coupons').doc(order.couponCode));
+        const couponData = couponDoc.exists ? (couponDoc.data() as {
+          active?: boolean;
+          expiresAt?: string;
+          minOrder?: number;
+          type?: 'PERCENT' | 'FLAT';
+          value?: number;
+        }) : null;
+        const expired = !!couponData?.expiresAt && new Date(couponData.expiresAt) < new Date();
+        if (!couponData || couponData.active !== true || expired || catalogSubtotal < (couponData.minOrder ?? 0)) {
+          throw new Error('COUPON_INVALID:This coupon is no longer valid');
+        }
+        expectedDiscount =
+          couponData.type === 'PERCENT'
+            ? Math.round((catalogSubtotal * (couponData.value ?? 0)) / 100)
+            : (couponData.value ?? 0);
       }
+      if (Math.abs(expectedDiscount - order.discount) > 1) {
+        throw new Error('COUPON_INVALID:This coupon is no longer valid');
+      }
+
       const expectedTotal = catalogSubtotal + order.shipping + order.lowOrderCharge - order.discount;
       if (Math.abs(expectedTotal - order.total) > 1) {
         throw new Error('PRICE_MISMATCH:Your cart is out of date — please refresh and try again');
@@ -201,6 +230,9 @@ export async function POST(request: NextRequest) {
     }
     if (message.startsWith('PRICE_MISMATCH:')) {
       return NextResponse.json({ error: message.slice('PRICE_MISMATCH:'.length) }, { status: 409 });
+    }
+    if (message.startsWith('COUPON_INVALID:')) {
+      return NextResponse.json({ error: message.slice('COUPON_INVALID:'.length) }, { status: 409 });
     }
     return NextResponse.json({ error: 'Failed to place order' }, { status: 500 });
   }

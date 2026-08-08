@@ -68,6 +68,14 @@ function CreatorPanelContent() {
           <p className="font-semibold text-neutral-900">Partnerships</p>
           <p className="text-xs text-neutral-500 mt-1">Manage partnerships and promotions</p>
         </Link>
+        <Link
+          href="/admin/subscriptions"
+          className="bg-white border border-neutral-200 rounded-xl p-6 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+        >
+          <p className="text-2xl mb-2">📧</p>
+          <p className="font-semibold text-neutral-900">Subscriptions</p>
+          <p className="text-xs text-neutral-500 mt-1">Email newsletter subscribers</p>
+        </Link>
         <div className="bg-white border border-neutral-200 rounded-xl p-6">
           <p className="text-2xl mb-2">🔐</p>
           <p className="font-semibold text-neutral-900">Security</p>

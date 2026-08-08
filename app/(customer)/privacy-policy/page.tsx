@@ -14,7 +14,6 @@ export default function PrivacyPolicyPage() {
         <ul className="list-disc pl-5 space-y-1">
           <li>Account details you provide (name, email, phone)</li>
           <li>Delivery addresses and order records</li>
-          <li>Anonymous usage analytics to improve the store</li>
         </ul>
         <h2 className="text-lg font-semibold text-neutral-900">What we never do</h2>
         <ul className="list-disc pl-5 space-y-1">

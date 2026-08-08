@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -18,6 +18,7 @@ const baseSidebarItems = [
   { icon: '🏢', label: 'Brands', href: '/admin/brands', id: 'brands' },
   { icon: '🖼️', label: 'Banners', href: '/admin/banners', id: 'banners' },
   { icon: '🎟️', label: 'Coupons', href: '/admin/coupons', id: 'coupons' },
+  { icon: '📧', label: 'Subscriptions', href: '/admin/subscriptions', id: 'subscriptions' },
   { icon: '👥', label: 'Customers', href: '/admin/customers', id: 'customers' },
   { icon: '⭐', label: 'Reviews & QnA', href: '/admin/reviews', id: 'reviews' },
   { icon: '⚙️', label: 'Settings', href: '/admin/settings', id: 'settings' },
@@ -28,6 +29,7 @@ const creatorSidebarItem = { icon: '👤', label: 'Creator', href: '/admin/creat
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { user } = useAuth();
   const isCreator = user?.email === 'smart@gmail.com';
@@ -35,6 +37,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const isActive = (href: string) =>
     href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
+
+  useEffect(() => {
+    if (!profileOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [profileOpen]);
 
   return (
     <AdminGuard>
@@ -98,7 +118,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             ☰
           </button>
-          <div className="relative">
+          <div className="relative" ref={profileMenuRef}>
             <button
               onClick={() => setProfileOpen(!profileOpen)}
               className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-neutral-100"

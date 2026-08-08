@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.akrelectronics.app',
-  appName: 'A.K.R Electronics',
+  appName: 'AKR Electronics',
   webDir: 'www',
   server: {
     url: 'https://akr-electronics.vercel.app',

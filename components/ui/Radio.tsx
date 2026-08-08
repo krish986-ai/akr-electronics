@@ -12,15 +12,14 @@ export function Radio({ label, className, ...props }: RadioProps) {
         <input
           type="radio"
           className={cn(
-            'w-5 h-5 rounded-full border-2 border-neutral-300 text-primary-500 transition-colors',
+            'peer w-5 h-5 rounded-full border-2 border-neutral-300 text-primary-500 transition-colors',
             'appearance-none cursor-pointer',
-            'checked:border-primary-500',
             focusRing,
             className
           )}
           {...props}
         />
-        <div className="absolute inset-1 rounded-full bg-primary-500 hidden checked:block" />
+        <div className="absolute inset-0 m-auto w-2.5 h-2.5 rounded-full bg-primary-500 opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" />
       </div>
       {label && <span className="text-sm font-medium">{label}</span>}
     </label>

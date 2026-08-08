@@ -16,6 +16,7 @@ interface SendEmailInput {
   subject: string;
   html: string;
   text: string;
+  from?: string;
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<void> {
@@ -24,7 +25,7 @@ export async function sendEmail(input: SendEmailInput): Promise<void> {
     return;
   }
   const result = await resend.emails.send({
-    from: fromAddress,
+    from: input.from || fromAddress,
     to: input.to,
     subject: input.subject,
     html: input.html,
